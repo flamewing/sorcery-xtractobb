@@ -1,0 +1,39 @@
+empathy
+confidence
+brains
+honour
+haste
+
+0f498f40	00000007	00000010	00000014	00000014
+0f498f47	00000007	00000030	000b3e75	001555d8
+0f498f4e	00000007	000b3eb0	00000014	00000014
+0f49909e	00000019	019855c0	00005963	000555d4
+
+0f4a031f	0000000e	0ed318a0	0000fa28	0000fa28
+
+0f4a032d	00000014	0ed412d0	0006fc98	0006fc98
+
+0f4a0b10
+
+0f49b5b7	00000013	065e2610	004c9c62	004c9c62
+0f49b5ca	0000000d	06aac280	000196ea	00088121
+
+
+0f4a889c
+0f4a0b10
+
+Header
+bytes	Content
+8		AP_Pack!\x9C
+4		Length of ogg
+4		File table pointer
+
+
+File table
+bytes	content
+4		File name pointer
+4		Length of file name
+4		File pointer
+4		File length (compressed)
+4		File length (uncompressed)
+
