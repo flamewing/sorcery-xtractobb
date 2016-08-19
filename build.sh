@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CXXFLAGS="-g3 -Wall -Wextra -std=c++14"
+CXXFLAGS="-std=c++14 -g3 -Wall -Wextra -pedantic"
 DEBUG_FLAGS=
 LIBS="-lboost_system -lboost_filesystem -lboost_iostreams -lboost_regex"
 
@@ -12,7 +12,7 @@ else
 	DEBUG_FLAGS="-O3 -s"
 fi
 
-rm *~
+rm -f *~
 g++ $CXXFLAGS $DEBUG_FLAGS -o xtractobb xtractobb.cc jsont.cc $LIBS
 g++ $CXXFLAGS $DEBUG_FLAGS -o pretty-print-json pretty-print-json.cc jsont.cc $LIBS
 

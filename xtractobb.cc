@@ -22,6 +22,17 @@
 
 #include <boost/regex.hpp>
 
+// After c++17, these should be swapped.
+#if 0
+#include <experimental/string_view>
+//using std::string_view;
+//using std::experimental::string_view;
+#else
+#include <boost/utility/string_ref.hpp>
+using boost::string_ref;
+#define string_view string_ref
+#endif
+
 #include "prettyJson.h"
 #include "jsont.h"
 
@@ -62,13 +73,15 @@ inline size_t Read1(istream &in) {
 	return c;
 }
 
-inline size_t Read1(char const *& in) {
-	size_t c = static_cast<unsigned char>(*in++);
+inline size_t Read1(string_view &in) {
+	size_t c = in[0];
+	in.remove_prefix(1);
 	return c;
 }
 
-inline size_t Read1(unsigned char const *& in) {
-	size_t c = *in++;
+template <typename T>
+inline size_t Read1(T &in) {
+	size_t c = static_cast<unsigned char>(*in++);
 	return c;
 }
 
@@ -173,7 +186,7 @@ public:
 	typedef typename base_type::category category;
 
 	// TODO: Filter should receive output directory instead.
-	basic_json_stitch_filter(vector_type const &_inkContent) : inkContent(_inkContent) {
+	basic_json_stitch_filter(string_view const &_inkContent) : inkContent(_inkContent) {
 	}
 private:
 	void do_filter(const vector_type& src, vector_type& dest) {
@@ -261,15 +274,12 @@ private:
 								stringstream sptr(reader.stringValue());
 								unsigned offset, length;
 								sptr >> offset >> length;
-								typename vector_type::const_iterator first = inkContent.cbegin() + offset;
-								typename vector_type::const_iterator last  = first + length;
+								string_view stitch(inkContent.substr(offset, length));
 
-								if (*first == '[') {
-									sint << "{\"content\":";
-									copy(first, last, ostream_iterator<Ch>(sint));
-									sint << '}';
+								if (stitch[0] == '[') {
+									sint << "{\"content\":" << stitch  << '}';
 								} else {
-									copy(first, last, ostream_iterator<Ch>(sint));
+									sint << stitch;
 								}
 								tok = reader.next();
 								if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd && tok != jsont::End) {
@@ -297,7 +307,7 @@ private:
 		string const &str = sint.str();
 		dest.assign(str.begin(), str.end());
 	}
-	vector_type const &inkContent;
+	string_view const &inkContent;
 };
 BOOST_IOSTREAMS_PIPABLE(basic_json_stitch_filter, 2)
 
@@ -349,22 +359,24 @@ int main(int argc, char *argv[]) {
 	}
 
 	unsigned len = file_size(obbfile);
+	string obbcontents;
+	obbcontents.resize(len);
+	fin.read(&obbcontents[0], len);
+	fin.close();
 
-	char sigbuf[8];
-	fin.read(sigbuf, sizeof(sigbuf));
-	if (memcmp(sigbuf, "AP_Pack!", sizeof(sigbuf))) {
+	string_view oggview(obbcontents);
+	if (oggview.substr(0, 8) != "AP_Pack!") {
 		cerr << "Input file missing signature!" << endl << endl;
 		return eOBB_INVALID;
 	}
 
-	unsigned hlen = Read4(fin), htbl = Read4(fin);
+	string_view::const_iterator it = oggview.cbegin() + 8;
+	unsigned hlen = Read4(it), htbl = Read4(it);
 	if (len != hlen) {
 		cerr << "Incorrect length in header!" << endl << endl;
 		return eOBB_CORRUPT;
 	}
 
-	// TODO: OBB wrapper class with file search.
-	unsigned mainJsonPtr = 0u, inkContentPtr = 0u, referencePtr = 0u;
 	// TODO: Main json file should be found from Info.plist file: main json filename = dict["StoryFilename"] + (dict["SorceryPartNumber"] == "3" ? ".json" : ".minjson")
 	regex mainJsonRegex("Sorcery\\d\\.(min)?json");
 	// TODO: inkcontent filename should be found from main json: inkcontent filename = indexed-content/filename
@@ -372,31 +384,31 @@ int main(int argc, char *argv[]) {
 	// TODO: Should not have any special significance.
 	regex referenceRegex("Sorcery\\dReference\\.(min)?json");
 
-	fin.seekg(htbl);
-	while (fin.tellg() < hlen) {
-		unsigned fentry = fin.tellg();
-		unsigned fnameptr = Read4(fin), fnamelen = Read4(fin),
-		         fdataptr = Read4(fin), fdatalen = Read4(fin), funclen = Read4(fin);
-		unsigned nextloc = fin.tellg();
+	string_view mainJsonName;
+	string_view mainJsonData, inkContentData;
+	unsigned mainJsonUnc = 0u;
 
-		fin.seekg(fnameptr);
-		char *fnamebuf = new char[fnamelen+1];
-		fin.read(fnamebuf, fnamelen);
-		fnamebuf[fnamelen] = 0;
+	it = oggview.cbegin() + htbl;
+	while (it != oggview.cend()) {
+		unsigned fnameptr = Read4(it), fnamelen = Read4(it),
+		         fdataptr = Read4(it), fdatalen = Read4(it), funclen = Read4(it);
+
+		string_view fname(oggview.substr(fnameptr, fnamelen));
+		string_view fdata(oggview.substr(fdataptr, fdatalen));
 		// TODO: These should be obtained by name from OBB wrapper when class is implemented.
-		if (regex_match(fnamebuf, mainJsonRegex)) {
-			mainJsonPtr = fentry;
-			cout << "Found main json : " << fnamebuf << "\t" << mainJsonPtr << endl;
-		} else if (regex_match(fnamebuf, inkContentRegex)) {
-			inkContentPtr = fentry;
-			cout << "Found inkcontent: " << fnamebuf << "\t" << inkContentPtr << endl;
-		} else if (regex_match(fnamebuf, referenceRegex)) {
-			referencePtr = fentry;
-			cout << "Found reference : " << fnamebuf << "\t" << referencePtr << endl;
+		if (regex_match(fname.cbegin(), fname.cend(), mainJsonRegex)) {
+			mainJsonName = fname;
+			mainJsonData = fdata;
+			mainJsonUnc = funclen;
+			cout << "Found main json : " << fname << endl;
+		} else if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
+			inkContentData = fdata;
+			cout << "Found inkcontent: " << fname << endl;
+		} else if (regex_match(fname.cbegin(), fname.cend(), referenceRegex)) {
+			cout << "Found reference : " << fname << endl;
 		}
 
-		path outfile(outdir / fnamebuf);
-		delete [] fnamebuf;
+		path outfile(outdir / fname.to_string());
 		path parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
@@ -419,37 +431,14 @@ int main(int argc, char *argv[]) {
 				}
 				fsout.push(fout);
 
-				char *fdatabuf = new char[fdatalen];
-				fin.seekg(fdataptr);
-				fin.read(fdatabuf, fdatalen);
-				fsout.write(fdatabuf, fdatalen);
-				delete [] fdatabuf;
+				fsout.write(fdata.data(), fdata.size());
 			}
 		}
-
-		fin.seekg(nextloc);
 	}
 
-	if (mainJsonPtr != 0u && inkContentPtr != 0u) {
-		fin.seekg(mainJsonPtr);
-		unsigned fnameptr = Read4(fin);
-		fin.ignore(4);
-		unsigned fdataptr = Read4(fin), fdatalen = Read4(fin), funclen = Read4(fin);
-		// Want only the digit
-		char fnamebuf[50];
-		fin.seekg(fnameptr + sizeof("Sorcery") - 1);
-		char cc = fin.get();
-		snprintf(fnamebuf, sizeof(fnamebuf), "Sorcery%c-Reference.json", cc);
-
-		// TODO: Filter should receive OBB wrapper class and read inkcontent filename = indexed-content/filename
-		fin.seekg(inkContentPtr + 8);
-		unsigned contentData = Read4(fin), contentLen = Read4(fin);
-		fin.seekg(contentData);
-		vector<char> inkContent;
-		inkContent.resize(contentLen);
-		fin.read(&inkContent[0], contentLen);
-
-		path outfile(outdir / fnamebuf);
+	if (mainJsonData.size() != 0u && inkContentData.size() != 0u) {
+		string fname = mainJsonName.substr(0, sizeof("SorceryN") - 1).to_string() + "-Reference.json";
+		path outfile(outdir / fname);
 		path parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
@@ -461,24 +450,18 @@ int main(int argc, char *argv[]) {
 			} else {
 				cout << "Creating reference file '" << outfile << "'." << endl;
 				filtering_ostream fsout;
-				if (fdatalen != funclen) {
+				if (mainJsonData.size() != mainJsonUnc) {
 					fsout.push(zlib_decompressor());
 				}
 
 				// TODO: Filter should receive OBB wrapper class and read inkcontent filename = indexed-content/filename
-				fsout.push(json_stitch_filter(inkContent));
+				fsout.push(json_stitch_filter(inkContentData));
 				fsout.push(json_filter(ePRETTY));
 				fsout.push(fout);
-
-				char *fdatabuf = new char[fdatalen];
-				fin.seekg(fdataptr);
-				fin.read(fdatabuf, fdatalen);
-				fsout.write(fdatabuf, fdatalen);
-				delete [] fdatabuf;
+				fsout.write(mainJsonData.data(), mainJsonData.size());
 			}
 		}
 	}
 
 	return eOK;
 }
-
