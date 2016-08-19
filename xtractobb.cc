@@ -31,6 +31,10 @@
 #include <boost/utility/string_ref.hpp>
 using boost::string_ref;
 #define string_view string_ref
+	inline constexpr string_ref
+	operator""sv(const char* __str, size_t __len) {
+		return string_ref{__str, __len};
+	}
 #endif
 
 #include "prettyJson.h"
@@ -50,6 +54,8 @@ using std::ostream_iterator;
 using std::string;
 using std::stringstream;
 using std::vector;
+
+using namespace std::literals::string_literals;
 
 using namespace boost::filesystem;
 using namespace boost::iostreams;
@@ -229,13 +235,13 @@ private:
 				sint << ']';
 				break;
 			case jsont::True:
-				sint << "true";
+				sint << "true"sv;
 				break;
 			case jsont::False:
-				sint << "false";
+				sint << "false"sv;
 				break;
 			case jsont::Null:
-				sint << "null";
+				sint << "null"sv;
 				break;
 			case jsont::Integer:
 				sint << reader.intValue();
@@ -247,8 +253,8 @@ private:
 				sint << '"' << reader.stringValue() << '"';
 				break;
 			case jsont::FieldName:
-				if (reader.stringValue() == "indexed-content") {
-					sint << "\"stitches\":";
+				if (reader.stringValue() == "indexed-content"sv) {
+					sint << "\"stitches\":"sv;
 					tok = reader.next();
 					assert(tok == jsont::ObjectStart);
 					sint << '{';
@@ -256,19 +262,19 @@ private:
 					tok = reader.next();
 					while (tok != jsont::ObjectEnd) {
 						assert(tok == jsont::FieldName);
-						if (reader.stringValue() == "filename") {
+						if (reader.stringValue() == "filename"sv) {
 							// TODO: instead of being discarded, this should be used with output directoty to open stitch source file
 							tok = reader.next();	// Fetch filename...
 							assert(tok == jsont::String);
 							tok = reader.next();	// ... and discard it
-						} else if (reader.stringValue() == "ranges") {
+						} else if (reader.stringValue() == "ranges"sv) {
 							// The meat.
 							tok = reader.next();
 							assert(tok == jsont::ObjectStart);
 							tok = reader.next();
 							while (tok != jsont::ObjectEnd) {
 								assert(tok == jsont::FieldName);
-								sint << '"' << reader.stringValue() << "\":";
+								sint << '"' << reader.stringValue() << "\":"sv;
 								tok = reader.next();
 								assert(tok == jsont::String);
 								stringstream sptr(reader.stringValue());
@@ -277,7 +283,7 @@ private:
 								string_view stitch(inkContent.substr(offset, length));
 
 								if (stitch[0] == '[') {
-									sint << "{\"content\":" << stitch  << '}';
+									sint << "{\"content\":"sv << stitch  << '}';
 								} else {
 									sint << stitch;
 								}
@@ -328,33 +334,33 @@ enum ErrorCodes {
 
 int main(int argc, char *argv[]) {
 	if (argc != 3) {
-		cerr << "Usage: " << argv[0] << " inputfile outputdir" << endl << endl;
+		cerr << "Usage: "sv << argv[0] << " inputfile outputdir"sv << endl << endl;
 		return eWRONG_ARGC;
 	}
 
 	path obbfile(argv[1]);
 	if (!exists(obbfile)) {
-		cerr << "File '" << obbfile << "' does not exist!" << endl << endl;
+		cerr << "File '"sv << obbfile << "' does not exist!"sv << endl << endl;
 		return eOBB_NOT_FOUND;
 	} else if (!is_regular_file(obbfile)) {
-		cerr << "Path '" << obbfile << "' must be a file!" << endl << endl;
+		cerr << "Path '"sv << obbfile << "' must be a file!"sv << endl << endl;
 		return eOBB_NOT_FILE;
 	}
 
 	path outdir(argv[2]);
 	if (exists(outdir)) {
 		if (!is_directory(outdir)) {
-			cerr << "Path '" << outdir << "' must be a directory!" << endl << endl;
+			cerr << "Path '"sv << outdir << "' must be a directory!"sv << endl << endl;
 			return eOUTPUT_NOT_DIR;
 		}
 	} else if (!create_directories(outdir)) {
-		cerr << "Could not create output directory '" << outdir << "'!" << endl << endl;
+		cerr << "Could not create output directory '"sv << outdir << "'!"sv << endl << endl;
 		return eOUTPUT_NO_ACCESS;
 	}
 
 	ifstream fin(obbfile, ios::in|ios::binary);
 	if (!fin.good()) {
-		cerr << "Could not open input file '" << obbfile << "'!" << endl << endl;
+		cerr << "Could not open input file '"sv << obbfile << "'!"sv << endl << endl;
 		return eOBB_NO_ACCESS;
 	}
 
@@ -366,23 +372,23 @@ int main(int argc, char *argv[]) {
 
 	string_view oggview(obbcontents);
 	if (oggview.substr(0, 8) != "AP_Pack!") {
-		cerr << "Input file missing signature!" << endl << endl;
+		cerr << "Input file missing signature!"sv << endl << endl;
 		return eOBB_INVALID;
 	}
 
 	string_view::const_iterator it = oggview.cbegin() + 8;
 	unsigned hlen = Read4(it), htbl = Read4(it);
 	if (len != hlen) {
-		cerr << "Incorrect length in header!" << endl << endl;
+		cerr << "Incorrect length in header!"sv << endl << endl;
 		return eOBB_CORRUPT;
 	}
 
-	// TODO: Main json file should be found from Info.plist file: main json filename = dict["StoryFilename"] + (dict["SorceryPartNumber"] == "3" ? ".json" : ".minjson")
-	regex mainJsonRegex("Sorcery\\d\\.(min)?json");
+	// TODO: Main json file should be found from Info.plist file: main json filename = dict["StoryFilename"sv] + (dict["SorceryPartNumber"sv] == "3"sv ? ".json"sv : ".minjson"sv)
+	regex mainJsonRegex("Sorcery\\d\\.(min)?json"s);
 	// TODO: inkcontent filename should be found from main json: inkcontent filename = indexed-content/filename
-	regex inkContentRegex("Sorcery\\d\\.inkcontent");
+	regex inkContentRegex("Sorcery\\d\\.inkcontent"s);
 	// TODO: Should not have any special significance.
-	regex referenceRegex("Sorcery\\dReference\\.(min)?json");
+	regex referenceRegex("Sorcery\\dReference\\.(min)?json"s);
 
 	string_view mainJsonName;
 	string_view mainJsonData, inkContentData;
@@ -400,33 +406,33 @@ int main(int argc, char *argv[]) {
 			mainJsonName = fname;
 			mainJsonData = fdata;
 			mainJsonUnc = funclen;
-			cout << "Found main json : " << fname << endl;
+			cout << "Found main json : "sv << fname << endl;
 		} else if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
 			inkContentData = fdata;
-			cout << "Found inkcontent: " << fname << endl;
+			cout << "Found inkcontent: "sv << fname << endl;
 		} else if (regex_match(fname.cbegin(), fname.cend(), referenceRegex)) {
-			cout << "Found reference : " << fname << endl;
+			cout << "Found reference : "sv << fname << endl;
 		}
 
 		path outfile(outdir / fname.to_string());
 		path parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
-			cerr << "Could not create directory '" << parentdir << "' for file '" << outfile << "'!" << endl;
+			cerr << "Could not create directory '"sv << parentdir << "' for file '"sv << outfile << "'!"sv << endl;
 		} else {
-			if (outfile.extension() == ".minjson") {
-				outfile.replace_extension(".json");
+			if (outfile.extension() == ".minjson"s) {
+				outfile.replace_extension(".json"s);
 			}
 			ofstream fout(outfile, ios::out|ios::binary);
 			if (!fout.good()) {
-				cerr << "Could not create file '" << outfile << "'!" << endl;
+				cerr << "Could not create file '"sv << outfile << "'!"sv << endl;
 			} else {
 				filtering_ostream fsout;
 				if (fdatalen != funclen) {
 					fsout.push(zlib_decompressor());
 				}
 
-				if (outfile.extension() == ".json" || outfile.extension() == ".inkcontent") {
+				if (outfile.extension() == ".json"s || outfile.extension() == ".inkcontent"s) {
 					fsout.push(json_filter(ePRETTY));
 				}
 				fsout.push(fout);
@@ -437,18 +443,18 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (mainJsonData.size() != 0u && inkContentData.size() != 0u) {
-		string fname = mainJsonName.substr(0, sizeof("SorceryN") - 1).to_string() + "-Reference.json";
+		string fname = mainJsonName.substr(0, "SorceryN"sv.size()).to_string() + "-Reference.json"s;
 		path outfile(outdir / fname);
 		path parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
-			cerr << "Could not create directory '" << parentdir << "' for file '" << outfile << "'!" << endl;
+			cerr << "Could not create directory '"sv << parentdir << "' for file '"sv << outfile << "'!"sv << endl;
 		} else {
 			ofstream fout(outfile, ios::out|ios::binary);
 			if (!fout.good()) {
-				cerr << "Could not create file '" << outfile << "'!" << endl;
+				cerr << "Could not create file '"sv << outfile << "'!"sv << endl;
 			} else {
-				cout << "Creating reference file '" << outfile << "'." << endl;
+				cout << "Creating reference file '"sv << outfile << "'."sv << endl;
 				filtering_ostream fsout;
 				if (mainJsonData.size() != mainJsonUnc) {
 					fsout.push(zlib_decompressor());
