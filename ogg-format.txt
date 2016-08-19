@@ -1,9 +1,3 @@
-empathy
-confidence
-brains
-honour
-haste
-
 0f498f40	00000007	00000010	00000014	00000014
 0f498f47	00000007	00000030	000b3e75	001555d8
 0f498f4e	00000007	000b3eb0	00000014	00000014
@@ -24,7 +18,7 @@ haste
 
 Header
 bytes	Content
-8		AP_Pack!\x9C
+8		AP_Pack!
 4		Length of ogg
 4		File table pointer
 
