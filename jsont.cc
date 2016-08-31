@@ -54,7 +54,7 @@ const char* token_name(jsont::Token tok) {
 		case Float:       return "Float";
 		case String:      return "String";
 		case FieldName:   return "FieldName";
-		default:                 return "?";
+		default:          return "?";
 	}
 }
 

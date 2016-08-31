@@ -25,15 +25,15 @@
 // After c++17, these should be swapped.
 #if 0
 #include <experimental/string_view>
-//using std::string_view;
-//using std::experimental::string_view;
 #else
 #include <boost/utility/string_ref.hpp>
-using boost::string_ref;
+	namespace std {
+		using boost::string_ref;
+	}
 #define string_view string_ref
-	inline constexpr string_ref
+	inline constexpr std::string_view
 	operator""sv(const char* __str, size_t __len) {
-		return string_ref{__str, __len};
+		return std::string_view{__str, __len};
 	}
 #endif
 
@@ -54,6 +54,7 @@ using std::ostream_iterator;
 using std::string;
 using std::stringstream;
 using std::vector;
+using std::string_view;
 
 using namespace std::literals::string_literals;
 

@@ -14,8 +14,6 @@
 #include <stdexcept>
 #include <cinttypes>
 
-#define JSONT_CXX_RVALUE_REFS 1
-
 namespace jsont {
 
 	// Tokens
@@ -144,11 +142,8 @@ namespace jsont {
 			~Builder() { if (_buf) { free(_buf); _buf = 0; } }
 			Builder(const Builder& other);
 			Builder& operator=(const Builder& other);
-			#if JSONT_CXX_RVALUE_REFS
 			Builder(Builder&& other);
 			Builder& operator=(Builder&& other);
-			#endif
-
 			Builder& startObject();
 			Builder& endObject();
 			Builder& startArray();
