@@ -5,6 +5,7 @@
 #include <iostream>
 #include <iomanip>
 #include <iterator>
+#include <regex>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -19,8 +20,6 @@
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/filter/aggregate.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
-
-#include <boost/regex.hpp>
 
 // After c++17, these should be swapped.
 #if 0
@@ -51,6 +50,8 @@ using std::istream;
 using std::istream_iterator;
 using std::ostream;
 using std::ostream_iterator;
+using std::regex;
+using std::regex_match;
 using std::string;
 using std::stringstream;
 using std::vector;
@@ -60,9 +61,6 @@ using namespace std::literals::string_literals;
 
 using namespace boost::filesystem;
 using namespace boost::iostreams;
-
-using boost::regex;
-using boost::regex_match;
 
 #ifdef UNUSED
 #elif defined(__GNUC__)

@@ -2,7 +2,7 @@
 
 CXXFLAGS="-std=c++14 -g3 -Wall -Wextra -pedantic"
 DEBUG_FLAGS=
-LIBS="-lboost_system -lboost_filesystem -lboost_iostreams -lboost_regex"
+LIBS="-lboost_system -lboost_filesystem -lboost_iostreams"
 
 if [[ "$1" == "debug" ]]; then
 	DEBUG_FLAGS="-O0 -g3"
