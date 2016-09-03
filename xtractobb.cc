@@ -350,9 +350,12 @@ int main(int argc, char *argv[]) {
 			cerr << "Path "sv << outdir << " must be a directory!"sv << endl << endl;
 			return eOUTPUT_NOT_DIR;
 		}
-	} else if (!create_directories(outdir)) {
-		cerr << "Could not create output directory "sv << outdir << "!"sv << endl << endl;
-		return eOUTPUT_NO_ACCESS;
+	} else {
+		create_directories(outdir);
+		if (!is_directory(outdir)) {
+			cerr << "Could not create output directory "sv << outdir << "!"sv << endl << endl;
+			return eOUTPUT_NO_ACCESS;
+		}
 	}
 
 	ifstream fin(obbfile, ios::in|ios::binary);
