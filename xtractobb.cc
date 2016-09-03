@@ -173,7 +173,7 @@ private:
 		string const &str = sint.str();
 		dest.assign(str.begin(), str.end());
 	}
-	PrettyJSON pretty;
+	PrettyJSON const pretty;
 };
 BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
 
@@ -191,7 +191,7 @@ public:
 	typedef typename base_type::category category;
 
 	// TODO: Filter should receive output directory instead.
-	basic_json_stitch_filter(string_view const &_inkContent) : inkContent(_inkContent) {
+	basic_json_stitch_filter(string_view const& _inkContent) : inkContent(_inkContent) {
 	}
 private:
 	void do_filter(const vector_type& src, vector_type& dest) {
@@ -337,7 +337,7 @@ int main(int argc, char *argv[]) {
 		return eWRONG_ARGC;
 	}
 
-	path obbfile(argv[1]);
+	path const obbfile(argv[1]);
 	if (!exists(obbfile)) {
 		cerr << "File '"sv << obbfile << "' does not exist!"sv << endl << endl;
 		return eOBB_NOT_FOUND;
@@ -346,7 +346,7 @@ int main(int argc, char *argv[]) {
 		return eOBB_NOT_FILE;
 	}
 
-	path outdir(argv[2]);
+	path const outdir(argv[2]);
 	if (exists(outdir)) {
 		if (!is_directory(outdir)) {
 			cerr << "Path '"sv << outdir << "' must be a directory!"sv << endl << endl;
@@ -363,31 +363,29 @@ int main(int argc, char *argv[]) {
 		return eOBB_NO_ACCESS;
 	}
 
-	unsigned len = file_size(obbfile);
+	unsigned const len = file_size(obbfile);
 	string obbcontents;
 	obbcontents.resize(len);
 	fin.read(&obbcontents[0], len);
 	fin.close();
 
-	string_view oggview(obbcontents);
-	if (oggview.substr(0, 8) != "AP_Pack!") {
+	string_view const oggview(obbcontents);
+	if (oggview.substr(0, 8) != "AP_Pack!"sv) {
 		cerr << "Input file missing signature!"sv << endl << endl;
 		return eOBB_INVALID;
 	}
 
 	string_view::const_iterator it = oggview.cbegin() + 8;
-	unsigned hlen = Read4(it), htbl = Read4(it);
+	unsigned const hlen = Read4(it), htbl = Read4(it);
 	if (len != hlen) {
 		cerr << "Incorrect length in header!"sv << endl << endl;
 		return eOBB_CORRUPT;
 	}
 
 	// TODO: Main json file should be found from Info.plist file: main json filename = dict["StoryFilename"sv] + (dict["SorceryPartNumber"sv] == "3"sv ? ".json"sv : ".minjson"sv)
-	regex mainJsonRegex("Sorcery\\d\\.(min)?json"s);
+	regex const mainJsonRegex("Sorcery\\d\\.(min)?json"s);
 	// TODO: inkcontent filename should be found from main json: inkcontent filename = indexed-content/filename
-	regex inkContentRegex("Sorcery\\d\\.inkcontent"s);
-	// TODO: Should not have any special significance.
-	regex referenceRegex("Sorcery\\dReference\\.(min)?json"s);
+	regex const inkContentRegex("Sorcery\\d\\.inkcontent"s);
 
 	string_view mainJsonName;
 	string_view mainJsonData, inkContentData;
@@ -409,12 +407,10 @@ int main(int argc, char *argv[]) {
 		} else if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
 			inkContentData = fdata;
 			cout << "Found inkcontent: "sv << fname << endl;
-		} else if (regex_match(fname.cbegin(), fname.cend(), referenceRegex)) {
-			cout << "Found reference : "sv << fname << endl;
 		}
 
 		path outfile(outdir / fname.to_string());
-		path parentdir(outfile.parent_path());
+		path const parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
 			cerr << "Could not create directory '"sv << parentdir << "' for file '"sv << outfile << "'!"sv << endl;
@@ -430,21 +426,19 @@ int main(int argc, char *argv[]) {
 				if (fdatalen != funclen) {
 					fsout.push(zlib_decompressor());
 				}
-
 				if (outfile.extension() == ".json"s || outfile.extension() == ".inkcontent"s) {
 					fsout.push(json_filter(ePRETTY));
 				}
 				fsout.push(fout);
-
 				fsout.write(fdata.data(), fdata.size());
 			}
 		}
 	}
 
 	if (mainJsonData.size() != 0u && inkContentData.size() != 0u) {
-		string fname = mainJsonName.substr(0, "SorceryN"sv.size()).to_string() + "-Reference.json"s;
-		path outfile(outdir / fname);
-		path parentdir(outfile.parent_path());
+		string const fname = mainJsonName.substr(0, "SorceryN"sv.size()).to_string() + "-Reference.json"s;
+		path const outfile(outdir / fname);
+		path const parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
 			cerr << "Could not create directory '"sv << parentdir << "' for file '"sv << outfile << "'!"sv << endl;
@@ -458,7 +452,6 @@ int main(int argc, char *argv[]) {
 				if (mainJsonData.size() != mainJsonUnc) {
 					fsout.push(zlib_decompressor());
 				}
-
 				// TODO: Filter should receive OBB wrapper class and read inkcontent filename = indexed-content/filename
 				fsout.push(json_stitch_filter(inkContentData));
 				fsout.push(json_filter(ePRETTY));
