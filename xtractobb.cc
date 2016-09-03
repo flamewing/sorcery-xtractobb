@@ -44,6 +44,7 @@ using std::copy;
 using std::cout;
 using std::cerr;
 using std::endl;
+using std::flush;
 using std::ios;
 using std::ws;
 using std::istream;
@@ -405,16 +406,18 @@ int main(int argc, char *argv[]) {
 			mainJsonName = fname;
 			mainJsonData = fdata;
 			mainJsonCompressed = compressed;
-			cout << "Found main json : "sv << fname << endl;
+			cout << "\33[2K\rFound main json : "sv << fname << endl;
 		} else if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
 			inkContentData = fdata;
-			cout << "Found inkcontent: "sv << fname << endl;
+			cout << "\33[2K\rFound inkcontent: "sv << fname << endl;
 		}
+		cout << "\33[2K\rExtracting file "sv << fname.to_string() << flush;
 
 		path outfile(outdir / fname.to_string());
 		path const parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
+			cout << "\33[2K\r"sv << flush;
 			cerr << "Could not create directory "sv << parentdir << " for file "sv << outfile << "!"sv << endl;
 		} else {
 			if (outfile.extension() == ".minjson"s) {
@@ -422,6 +425,7 @@ int main(int argc, char *argv[]) {
 			}
 			ofstream fout(outfile, ios::out|ios::binary);
 			if (!fout.good()) {
+				cout << "\33[2K\r"sv << flush;
 				cerr << "Could not create file "sv << outfile << "!"sv << endl;
 			} else {
 				filtering_ostream fsout;
@@ -443,13 +447,15 @@ int main(int argc, char *argv[]) {
 		path const parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
+			cout << "\33[2K\r"sv << flush;
 			cerr << "Could not create directory "sv << parentdir << " for file "sv << outfile << "!"sv << endl;
 		} else {
 			ofstream fout(outfile, ios::out|ios::binary);
 			if (!fout.good()) {
+				cout << "\33[2K\r"sv << flush;
 				cerr << "Could not create file "sv << outfile << "!"sv << endl;
 			} else {
-				cout << "Creating reference file "sv << outfile << "."sv << endl;
+				cout << "\33[2K\rCreating reference file "sv << outfile << "... "sv << flush;
 				filtering_ostream fsout;
 				if (mainJsonCompressed) {
 					fsout.push(zlib_decompressor());
@@ -459,9 +465,10 @@ int main(int argc, char *argv[]) {
 				fsout.push(json_filter(ePRETTY));
 				fsout.push(fout);
 				fsout.write(mainJsonData.data(), mainJsonData.size());
+				cout << "done."sv << flush;
 			}
 		}
 	}
-
+	cout << endl;
 	return eOK;
 }

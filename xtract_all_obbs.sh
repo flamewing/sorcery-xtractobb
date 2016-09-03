@@ -15,7 +15,7 @@ mkdir -p sorcery{1,2,3}json/FightScenes
 for linkdir in 1 2 3; do
 	find sorcery${linkdir}obb -iname '*.json' -or -iname '*.inkcontent' | while read ff; do
 		link=sorcery${linkdir}json/${ff#sorcery${linkdir}obb/}
-		ln -fns ../$ff $link
+		ln -fns `pwd`/$ff $link
 	done
 done
 
