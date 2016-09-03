@@ -389,20 +389,21 @@ int main(int argc, char *argv[]) {
 
 	string_view mainJsonName;
 	string_view mainJsonData, inkContentData;
-	unsigned mainJsonUnc = 0u;
+	bool mainJsonCompressed = false;
 
 	it = oggview.cbegin() + htbl;
 	while (it != oggview.cend()) {
 		unsigned fnameptr = Read4(it), fnamelen = Read4(it),
-		         fdataptr = Read4(it), fdatalen = Read4(it), funclen = Read4(it);
-
+		         fdataptr = Read4(it), fdatalen = Read4(it);
 		string_view fname(oggview.substr(fnameptr, fnamelen));
 		string_view fdata(oggview.substr(fdataptr, fdatalen));
+		bool const compressed = fdata.size() != Read4(it);
+
 		// TODO: These should be obtained by name from OBB wrapper when class is implemented.
 		if (regex_match(fname.cbegin(), fname.cend(), mainJsonRegex)) {
 			mainJsonName = fname;
 			mainJsonData = fdata;
-			mainJsonUnc = funclen;
+			mainJsonCompressed = compressed;
 			cout << "Found main json : "sv << fname << endl;
 		} else if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
 			inkContentData = fdata;
@@ -423,7 +424,7 @@ int main(int argc, char *argv[]) {
 				cerr << "Could not create file "sv << outfile << "!"sv << endl;
 			} else {
 				filtering_ostream fsout;
-				if (fdatalen != funclen) {
+				if (compressed) {
 					fsout.push(zlib_decompressor());
 				}
 				if (outfile.extension() == ".json"s || outfile.extension() == ".inkcontent"s) {
@@ -449,7 +450,7 @@ int main(int argc, char *argv[]) {
 			} else {
 				cout << "Creating reference file "sv << outfile << "."sv << endl;
 				filtering_ostream fsout;
-				if (mainJsonData.size() != mainJsonUnc) {
+				if (mainJsonCompressed) {
 					fsout.push(zlib_decompressor());
 				}
 				// TODO: Filter should receive OBB wrapper class and read inkcontent filename = indexed-content/filename
