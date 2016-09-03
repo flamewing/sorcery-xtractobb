@@ -339,27 +339,27 @@ int main(int argc, char *argv[]) {
 
 	path const obbfile(argv[1]);
 	if (!exists(obbfile)) {
-		cerr << "File '"sv << obbfile << "' does not exist!"sv << endl << endl;
+		cerr << "File "sv << obbfile << " does not exist!"sv << endl << endl;
 		return eOBB_NOT_FOUND;
 	} else if (!is_regular_file(obbfile)) {
-		cerr << "Path '"sv << obbfile << "' must be a file!"sv << endl << endl;
+		cerr << "Path "sv << obbfile << " must be a file!"sv << endl << endl;
 		return eOBB_NOT_FILE;
 	}
 
 	path const outdir(argv[2]);
 	if (exists(outdir)) {
 		if (!is_directory(outdir)) {
-			cerr << "Path '"sv << outdir << "' must be a directory!"sv << endl << endl;
+			cerr << "Path "sv << outdir << " must be a directory!"sv << endl << endl;
 			return eOUTPUT_NOT_DIR;
 		}
 	} else if (!create_directories(outdir)) {
-		cerr << "Could not create output directory '"sv << outdir << "'!"sv << endl << endl;
+		cerr << "Could not create output directory "sv << outdir << "!"sv << endl << endl;
 		return eOUTPUT_NO_ACCESS;
 	}
 
 	ifstream fin(obbfile, ios::in|ios::binary);
 	if (!fin.good()) {
-		cerr << "Could not open input file '"sv << obbfile << "'!"sv << endl << endl;
+		cerr << "Could not open input file "sv << obbfile << "!"sv << endl << endl;
 		return eOBB_NO_ACCESS;
 	}
 
@@ -413,14 +413,14 @@ int main(int argc, char *argv[]) {
 		path const parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
-			cerr << "Could not create directory '"sv << parentdir << "' for file '"sv << outfile << "'!"sv << endl;
+			cerr << "Could not create directory "sv << parentdir << " for file "sv << outfile << "!"sv << endl;
 		} else {
 			if (outfile.extension() == ".minjson"s) {
 				outfile.replace_extension(".json"s);
 			}
 			ofstream fout(outfile, ios::out|ios::binary);
 			if (!fout.good()) {
-				cerr << "Could not create file '"sv << outfile << "'!"sv << endl;
+				cerr << "Could not create file "sv << outfile << "!"sv << endl;
 			} else {
 				filtering_ostream fsout;
 				if (fdatalen != funclen) {
@@ -441,13 +441,13 @@ int main(int argc, char *argv[]) {
 		path const parentdir(outfile.parent_path());
 
 		if (!exists(parentdir) && !create_directories(parentdir)) {
-			cerr << "Could not create directory '"sv << parentdir << "' for file '"sv << outfile << "'!"sv << endl;
+			cerr << "Could not create directory "sv << parentdir << " for file "sv << outfile << "!"sv << endl;
 		} else {
 			ofstream fout(outfile, ios::out|ios::binary);
 			if (!fout.good()) {
-				cerr << "Could not create file '"sv << outfile << "'!"sv << endl;
+				cerr << "Could not create file "sv << outfile << "!"sv << endl;
 			} else {
-				cout << "Creating reference file '"sv << outfile << "'."sv << endl;
+				cout << "Creating reference file "sv << outfile << "."sv << endl;
 				filtering_ostream fsout;
 				if (mainJsonData.size() != mainJsonUnc) {
 					fsout.push(zlib_decompressor());
