@@ -11,25 +11,24 @@ namespace jsont {
 		10, 11, 12, 13, 14, 15 // a-f
 	};
 
-	#if 0
-	static uint64_t _xtou64(const uint8_t* bytes, size_t len) {
+#if 0
+static uint64_t _xtou64(const uint8_t* bytes, size_t len) {
 	uint64_t value = 0;
 	uint64_t cutoff = UINT64_MAX / 16;
 	int cutoff_digit = (int)(UINT64_MAX - cutoff * 16);
 
 	for (size_t i = 0; i != len; ++i) {
-	uint8_t b = bytes[i];
-	int8_t digit = (b > '0'-1 && b < 'f'+1) ? kHexValueTable[b-'0'] : -1;
-	if (b == (uint8_t)-1 || // bad digit
-	(value > cutoff) || // overflow
-	((value == cutoff) && (digit > cutoff_digit)) ) {
-	return UINT64_MAX;
-} else {
-value = (value * 16) + digit;
-}
-}
-
-return value;
+		uint8_t b = bytes[i];
+		int8_t digit = (b > '0'-1 && b < 'f'+1) ? kHexValueTable[b-'0'] : -1;
+		if (b == (uint8_t)-1 || // bad digit
+			(value > cutoff) || // overflow
+			((value == cutoff) && (digit > cutoff_digit)) ) {
+			return UINT64_MAX;
+		} else {
+			value = (value * 16) + digit;
+		}
+	}
+	return value;
 }
 #endif
 

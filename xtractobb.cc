@@ -21,6 +21,8 @@
 #include <boost/iostreams/filter/aggregate.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
 
+#include <boost/interprocess/streams/vectorstream.hpp>
+
 // After c++17, these should be swapped.
 #if 0
 #include <experimental/string_view>
@@ -60,6 +62,8 @@ using namespace std::literals::string_literals;
 
 using namespace boost::filesystem;
 using namespace boost::iostreams;
+
+typedef boost::interprocess::basic_vectorstream<std::vector<char> > vectorstream;
 
 #ifdef UNUSED
 #elif defined(__GNUC__)
@@ -167,10 +171,10 @@ private:
 			return;
 		}
 
-		stringstream sint(ios::in|ios::out);
+		vectorstream sint;
+		sint.reserve(src.size()*3/2);
 		printJSON(src, sint, pretty);
-		string const &str = sint.str();
-		dest.assign(str.begin(), str.end());
+		sint.swap_vector(dest);
 	}
 	PrettyJSON const pretty;
 };
@@ -198,7 +202,8 @@ private:
 			return;
 		}
 
-		stringstream sint(ios::in|ios::out);
+		vectorstream sint;
+		sint.reserve(src.size()*3/2);
 		jsont::Tokenizer reader(src.data(), src.size(), jsont::UTF8TextEncoding);
 		size_t indent = 0u;
 		jsont::Token tok = reader.current();
@@ -307,9 +312,8 @@ private:
 			if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd && tok != jsont::End) {
 				sint << ',';
 			}
+			sint.swap_vector(dest);
 		}
-		string const &str = sint.str();
-		dest.assign(str.begin(), str.end());
 	}
 	string_view const &inkContent;
 };
