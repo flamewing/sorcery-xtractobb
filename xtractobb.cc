@@ -158,6 +158,7 @@ template<typename Ch, typename Alloc = std::allocator<Ch>>
 class basic_json_filter : public aggregate_filter<Ch, Alloc> {
 private:
 	typedef aggregate_filter<Ch, Alloc> base_type;
+	static vectorstream sint;
 public:
 	typedef typename base_type::char_type char_type;
 	typedef typename base_type::category category;
@@ -171,7 +172,6 @@ private:
 			return;
 		}
 
-		vectorstream sint;
 		sint.reserve(src.size()*3/2);
 		printJSON(src, sint, pretty);
 		sint.swap_vector(dest);
@@ -183,12 +183,16 @@ BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
 typedef basic_json_filter<char>    json_filter;
 typedef basic_json_filter<wchar_t> wjson_filter;
 
+template <typename Ch, typename Alloc>
+vectorstream basic_json_filter<Ch, Alloc>::sint;
+
 // Sorcery! JSON stitch filter for boost::filtering_ostream
 template<typename Ch, typename Alloc = std::allocator<Ch>>
 class basic_json_stitch_filter : public aggregate_filter<Ch, Alloc> {
 private:
 	typedef aggregate_filter<Ch, Alloc> base_type;
 	typedef typename base_type::vector_type vector_type;
+	static vectorstream sint;
 public:
 	typedef typename base_type::char_type char_type;
 	typedef typename base_type::category category;
@@ -202,7 +206,6 @@ private:
 			return;
 		}
 
-		vectorstream sint;
 		sint.reserve(src.size()*3/2);
 		jsont::Tokenizer reader(src.data(), src.size(), jsont::UTF8TextEncoding);
 		size_t indent = 0u;
@@ -312,8 +315,8 @@ private:
 			if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd && tok != jsont::End) {
 				sint << ',';
 			}
-			sint.swap_vector(dest);
 		}
+		sint.swap_vector(dest);
 	}
 	string_view const &inkContent;
 };
@@ -321,6 +324,9 @@ BOOST_IOSTREAMS_PIPABLE(basic_json_stitch_filter, 2)
 
 typedef basic_json_stitch_filter<char>    json_stitch_filter;
 typedef basic_json_stitch_filter<wchar_t> wjson_stitch_filter;
+
+template <typename Ch, typename Alloc>
+vectorstream basic_json_stitch_filter<Ch, Alloc>::sint;
 
 enum ErrorCodes {
 	eOK,
