@@ -15,7 +15,7 @@ using std::string;
 #endif
 
 template <typename Src, typename Dst>
-void printJSON(Src const &data, Dst &sint, PrettyJSON pretty) {
+void printJSON(Src const& data, Dst& sint, PrettyJSON pretty) {
 	jsont::Tokenizer reader(data.data(), data.size(), jsont::UTF8TextEncoding);
 	size_t indent = 0;
 	bool needValue = false;

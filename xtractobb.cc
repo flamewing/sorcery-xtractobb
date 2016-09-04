@@ -167,7 +167,7 @@ public:
 	}
 private:
 	typedef typename base_type::vector_type vector_type;
-	void do_filter(const vector_type& src, vector_type& dest) {
+	void do_filter(vector_type const& src, vector_type& dest) {
 		if (src.empty()) {
 			return;
 		}
@@ -201,7 +201,7 @@ public:
 	basic_json_stitch_filter(string_view const& _inkContent) : inkContent(_inkContent) {
 	}
 private:
-	void do_filter(const vector_type& src, vector_type& dest) {
+	void do_filter(vector_type const& src, vector_type& dest) {
 		if (src.empty()) {
 			return;
 		}
