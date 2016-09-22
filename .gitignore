@@ -1,0 +1,12 @@
+AnimalSpirits.txt
+Attributes-Opposites.txt
+Counterspells.txt
+Sorcery*-password.txt
+Spellbook.jpg
+com.inkle.sorcery*
+sorcery*
+# Executables
+pretty-print-json
+xtractobb
+*.pyc
+
