@@ -109,16 +109,16 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
+		vector<char> buf(len);
+		fin.read(&buf[0], len);
+		fin.close();
+
 		ofstream fout(jsonfile, ios::out);
 		if (!fout.good()) {
 			cerr << "Could not open output file "sv << jsonfile << " for writing!"sv << endl << endl;
 			num_errors++;
 			continue;
 		}
-
-		vector<char> buf(len);
-		fin.read(&buf[0], len);
-		fin.close();
 		printJSON(buf, fout, pretty);
 		fout.close();
 	}
