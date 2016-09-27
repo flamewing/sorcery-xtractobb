@@ -23,7 +23,6 @@
 #include <iterator>
 #include <regex>
 #include <string>
-#include <sstream>
 #include <vector>
 
 #include <boost/filesystem.hpp>
@@ -38,16 +37,17 @@
 #include <boost/iostreams/filter/zlib.hpp>
 
 #include <boost/interprocess/streams/vectorstream.hpp>
+#include <boost/interprocess/streams/bufferstream.hpp>
 
 // After c++17, these should be swapped.
 #if 0
 #include <experimental/string_view>
 #else
-#include <boost/utility/string_ref.hpp>
+#	include <boost/utility/string_ref.hpp>
 	namespace std {
-		using boost::string_ref;
+		using string_view = boost::string_ref;
 	}
-#define string_view string_ref
+
 	inline constexpr std::string_view
 	operator""sv(const char* __str, size_t __len) {
 		return std::string_view{__str, __len};
@@ -70,7 +70,6 @@ using std::ostream;
 using std::regex;
 using std::regex_match;
 using std::string;
-using std::stringstream;
 using std::vector;
 using std::string_view;
 
@@ -80,6 +79,7 @@ using namespace boost::filesystem;
 using namespace boost::iostreams;
 
 typedef boost::interprocess::basic_vectorstream<std::vector<char> > vectorstream;
+typedef boost::interprocess::basic_ibufferstream<char> ibufferstream;
 
 #ifdef UNUSED
 #elif defined(__GNUC__)
@@ -223,7 +223,7 @@ private:
 		}
 
 		sint.reserve(src.size()*3/2);
-		jsont::Tokenizer reader(src.data(), src.size(), jsont::UTF8TextEncoding);
+		jsont::Tokenizer reader(src.data(), src.size());
 		size_t indent = 0u;
 		jsont::Token tok = reader.current();
 		while (tok != jsont::End) {
@@ -266,16 +266,16 @@ private:
 				sint << "null"sv;
 				break;
 			case jsont::Integer:
-				sint << reader.intValue();
+				sint << reader.dataValue();
 				break;
 			case jsont::Float:
-				sint << reader.floatValue();
+				sint << reader.dataValue();
 				break;
 			case jsont::String:
-				sint << '"' << reader.stringValue() << '"';
+				sint << '"' << reader.dataValue() << '"';
 				break;
 			case jsont::FieldName:
-				if (reader.stringValue() == "indexed-content"sv) {
+				if (reader.dataValue() == "indexed-content"sv) {
 					sint << "\"stitches\":"sv;
 					tok = reader.next();
 					assert(tok == jsont::ObjectStart);
@@ -284,22 +284,23 @@ private:
 					tok = reader.next();
 					while (tok != jsont::ObjectEnd) {
 						assert(tok == jsont::FieldName);
-						if (reader.stringValue() == "filename"sv) {
+						if (reader.dataValue() == "filename"sv) {
 							// TODO: instead of being discarded, this should be used with output directoty to open stitch source file
 							tok = reader.next();	// Fetch filename...
 							assert(tok == jsont::String);
 							tok = reader.next();	// ... and discard it
-						} else if (reader.stringValue() == "ranges"sv) {
+						} else if (reader.dataValue() == "ranges"sv) {
 							// The meat.
 							tok = reader.next();
 							assert(tok == jsont::ObjectStart);
 							tok = reader.next();
 							while (tok != jsont::ObjectEnd) {
 								assert(tok == jsont::FieldName);
-								sint << '"' << reader.stringValue() << "\":"sv;
+								sint << '"' << reader.dataValue() << "\":"sv;
 								tok = reader.next();
 								assert(tok == jsont::String);
-								stringstream sptr(reader.stringValue());
+								string_view slice = reader.dataValue();
+								ibufferstream sptr(slice.data(), slice.length());
 								unsigned offset, length;
 								sptr >> offset >> length;
 								string_view stitch(inkContent.substr(offset, length));
@@ -320,7 +321,7 @@ private:
 					--indent;
 					sint << '}';
 				} else {
-					sint << '"' << reader.stringValue() << '"' << ':';
+					sint << '"' << reader.dataValue() << '"' << ':';
 				}
 				tok = reader.next();
 				continue;
@@ -462,7 +463,7 @@ int main(int argc, char *argv[]) {
 					fsout.push(json_filter(ePRETTY));
 				}
 				fsout.push(fout);
-				fsout.write(fdata.data(), fdata.size());
+				fsout << fdata;
 			}
 		}
 	}
@@ -490,7 +491,7 @@ int main(int argc, char *argv[]) {
 				fsout.push(json_stitch_filter(inkContentData));
 				fsout.push(json_filter(ePRETTY));
 				fsout.push(fout);
-				fsout.write(mainJsonData.data(), mainJsonData.size());
+				fsout << mainJsonData;
 				cout << "done."sv << flush;
 			}
 		}

@@ -16,7 +16,7 @@ using std::string;
 
 template <typename Src, typename Dst>
 void printJSON(Src const& data, Dst& sint, PrettyJSON pretty) {
-	jsont::Tokenizer reader(data.data(), data.size(), jsont::UTF8TextEncoding);
+	jsont::Tokenizer reader(data.data(), data.size());
 	size_t indent = 0;
 	bool needValue = false;
 	jsont::Token tok = reader.current();
@@ -96,28 +96,28 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON pretty) {
 				sint << string(indent, INDENT_CHAR);
 			}
 			needValue = false;
-			sint << reader.intValue();
+			sint << reader.dataValue();
 			break;
 		case jsont::Float:
 			if (pretty == ePRETTY && !needValue) {
 				sint << string(indent, INDENT_CHAR);
 			}
 			needValue = false;
-			sint << reader.floatValue();
+			sint << reader.dataValue();
 			break;
 		case jsont::String:
 			if (pretty == ePRETTY && !needValue) {
 				sint << string(indent, INDENT_CHAR);
 			}
 			needValue = false;
-			sint << '"' << reader.stringValue() << '"';
+			sint << '"' << reader.dataValue() << '"';
 			break;
 		case jsont::FieldName:
 			if (pretty == ePRETTY) {
 				sint << string(indent, INDENT_CHAR);
 			}
 			needValue = true;
-			sint << '"' << reader.stringValue() << '"' << ':';
+			sint << '"' << reader.dataValue() << '"' << ':';
 			if (pretty != eNO_WHITESPACE) {
 				sint << ' ';
 			}
