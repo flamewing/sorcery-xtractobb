@@ -1,33 +1,32 @@
-// JSON Tokenizer and builder. Copyright (c) 2012, Rasmus Andersson. All rights
-// reserved. Use of this source code is governed by a MIT-style license that can
-// be found in the LICENSE file.
+/*
+ *	JSON Tokenizer and builder.
+ *
+ *	Copyright © 2012  Rasmus Andersson.
+ *	Copyright © 2016 Flamewing <flamewing.sonic@gmail.com>
+ *
+ *	All rights reserved. Use of this source code is governed by a
+ *	MIT-style license that can be found in the copying.md file.
+ */
 #ifndef JSONT_CXX_INCLUDED
 #define JSONT_CXX_INCLUDED
 
-#include <cstdint>  // uint8_t, int64_t
-#include <cstdlib>  // size_t
-#include <cstring>  // strlen
-#include <cstdbool> // bool
-#include <math.h>
-#include <assert.h>
 #include <string>
-#include <stdexcept>
-#include <cinttypes>
 
 // After c++17, these should be swapped.
-#if 0
-#include <experimental/string_view>
-#else
-#	include <boost/utility/string_ref.hpp>
+#if 1
+#	include <experimental/string_view>
 	namespace std {
-		using string_view = boost::string_ref;
+		using string_view = std::experimental::string_view;
 	}
+	using namespace std::experimental::string_view_literals;
+#else
+#	include <string_view>
+	using namespace std::literals::string_view_literals;
 #endif
 
 namespace jsont {
-
 	// Tokens
-	typedef enum {
+	enum Token {
 		End = 0,       // Input ended
 		ObjectStart,   // {
 		ObjectEnd,     // }
@@ -42,14 +41,13 @@ namespace jsont {
 		FieldName,     // field name
 		Error,         // An error occured (see `error()` for details)
 		_Comma,
-	} Token;
-
-	class TokenizerInternal;
+	};
 
 	// Reads a sequence of bytes and produces tokens and values while doing so
 	class Tokenizer {
 	public:
 		Tokenizer(const char* bytes, size_t length) noexcept;
+		Tokenizer(std::string_view slice) noexcept;
 		~Tokenizer() noexcept;
 
 		// Read next token
@@ -61,6 +59,7 @@ namespace jsont {
 		// Reset the tokenizer, making it possible to reuse this parser so to avoid
 		// unnecessary memory allocation and deallocation.
 		void reset(const char* bytes, size_t length) noexcept;
+		void reset(std::string_view slice) noexcept;
 
 		// True if the current token has a value
 		bool hasValue() const noexcept;
@@ -82,7 +81,7 @@ namespace jsont {
 		bool boolValue() const noexcept;
 
 		// Error codes
-		typedef enum {
+		enum ErrorCode {
 			UnspecifiedError = 0,
 			UnexpectedComma,
 			UnexpectedTrailingComma,
@@ -92,13 +91,13 @@ namespace jsont {
 			MalformedNumberLiteral,
 			UnterminatedString,
 			SyntaxError,
-		} ErrorCode;
+		};
 
 		// Returns the error code of the last error
 		ErrorCode error() const noexcept;
 
 		// Returns a human-readable message for the last error. Never returns NULL.
-		const char* errorMessage() const noexcept;
+		std::string_view errorMessage() const noexcept;
 
 		// The byte offset into input where the tokenizer is currently looking. In the
 		// event of an error, this will point to the source of the error.
@@ -106,32 +105,18 @@ namespace jsont {
 
 		// Total number of input bytes
 		size_t inputSize() const noexcept;
-
-		// A pointer to the input data as passed to `reset` or the constructor.
-		const char* inputBytes() const noexcept;
-
-		friend class TokenizerInternal;
 	private:
+		const Token& readAtom(std::string_view atom, const Token& token) noexcept;
 		size_t availableInput() const noexcept;
 		size_t endOfInput() const noexcept;
 		const Token& setToken(Token t) noexcept;
 		const Token& setError(ErrorCode error) noexcept;
 
-		struct {
-			const uint8_t* bytes;
-			size_t length;
-			size_t offset;
-		} _input;
-		struct Value {
-			Value() noexcept : offset(0), length(0) {}
-			void beginAtOffset(size_t z) noexcept;
-			size_t offset; // into _input.bytes
-			size_t length;
-		} _value;
+		std::string_view _input;
+		std::string_view _value;
+		size_t _offset;
 		Token _token;
-		struct {
-			ErrorCode code;
-		} _error;
+		ErrorCode _error;
 	};
 
 	// ------------------- internal ---------------------
@@ -141,8 +126,25 @@ namespace jsont {
 		reset(bytes, length);
 	}
 
+	inline Tokenizer::Tokenizer(std::string_view slice) noexcept
+	: _token(End) {
+		reset(slice);
+	}
+
 	inline const Token& Tokenizer::current() const noexcept {
 		return _token;
+	}
+
+	inline void Tokenizer::reset(const char* bytes, size_t length) noexcept {
+		reset(std::string_view(bytes, length));
+	}
+
+	inline void Tokenizer::reset(std::string_view slice) noexcept {
+		_input = slice;
+		_offset = 0;
+		_error = UnspecifiedError;
+		// Advance to first token
+		next();
 	}
 
 	inline bool Tokenizer::hasValue() const noexcept {
@@ -158,11 +160,11 @@ namespace jsont {
 	}
 
 	inline size_t Tokenizer::availableInput() const noexcept {
-		return _input.length - _input.offset;
+		return _input.length() - _offset;
 	}
 
 	inline size_t Tokenizer::endOfInput() const noexcept {
-		return _input.offset == _input.length;
+		return _offset == _input.length();
 	}
 
 	inline const Token& Tokenizer::setToken(Token t) noexcept {
@@ -170,29 +172,12 @@ namespace jsont {
 	}
 
 	inline const Token& Tokenizer::setError(Tokenizer::ErrorCode error) noexcept {
-		_error.code = error;
+		_error = error;
 		return _token = Error;
 	}
 
-	inline size_t Tokenizer::inputOffset() const noexcept {
-		return _input.offset;
-	}
-
-	inline size_t Tokenizer::inputSize() const noexcept {
-		return _input.length;
-	}
-
-	inline const char* Tokenizer::inputBytes() const noexcept {
-		return reinterpret_cast<const char*>(_input.bytes);
-	}
-
-	inline void Tokenizer::Value::beginAtOffset(size_t z) noexcept {
-		offset = z;
-		length = 0;
-	}
-
 	inline Tokenizer::ErrorCode Tokenizer::error() const noexcept {
-		return _error.code;
+		return _error;
 	}
 }
 

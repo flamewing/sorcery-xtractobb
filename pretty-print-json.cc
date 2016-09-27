@@ -1,3 +1,19 @@
+/*
+ *	Copyright © 2016 Flamewing <flamewing.sonic@gmail.com>
+ *
+ *	This program is free software: you can redistribute it and/or modify
+ *	it under the terms of the GNU General Public License as published by
+ *	the Free Software Foundation, either version 3 of the License, or
+ *	(at your option) any later version.
+ *
+ *	This program is distributed in the hope that it will be useful,
+ *	but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *	GNU General Public License for more details.
+ *
+ *	You should have received a copy of the GNU General Public License
+ *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include <iostream>
 #include <vector>
 
@@ -7,18 +23,15 @@
 #include <boost/iostreams/stream.hpp>
 
 // After c++17, these should be swapped.
-#if 0
-#include <experimental/string_view>
-#else
-#include <boost/utility/string_ref.hpp>
+#if 1
+#	include <experimental/string_view>
 	namespace std {
-		using boost::string_ref;
+		using string_view = std::experimental::string_view;
 	}
-#define string_view string_ref
-	inline constexpr std::string_view
-	operator""sv(const char* __str, size_t __len) {
-		return std::string_view{__str, __len};
-	}
+	using namespace std::experimental::string_view_literals;
+#else
+#	include <string_view>
+	using namespace std::literals::string_view_literals;
 #endif
 
 #include "prettyJson.h"

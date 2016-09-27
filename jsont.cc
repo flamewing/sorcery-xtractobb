@@ -1,67 +1,55 @@
+/*
+ *	JSON Tokenizer and builder.
+ *
+ *	Copyright © 2012  Rasmus Andersson.
+ *	Copyright © 2016 Flamewing <flamewing.sonic@gmail.com>
+ *
+ *	All rights reserved. Use of this source code is governed by a
+ *	MIT-style license that can be found in the copying.md file.
+ */
 #include "jsont.h"
 
-// After c++17, this should be removed.
-#if 1
-	inline constexpr std::string_view
-	operator""sv(const char* __str, size_t __len) {
-		return std::string_view{__str, __len};
-	}
-#endif
-
+using std::string;
 using std::string_view;
 
 namespace jsont {
 
-	class TokenizerInternal {
-	public:
-		inline static const uint8_t* currentInput(const Tokenizer& self) noexcept {
-			return self._input.bytes + self._input.offset;
+	inline const Token& Tokenizer::readAtom(string_view atom, const Token& token) noexcept {
+		if (availableInput() < atom.length()) {
+			return setError(Tokenizer::PrematureEndOfInput);
+		} else if (_input.compare(_offset, atom.length(), atom) != 0) {
+			return setError(Tokenizer::InvalidByte);
+		} else if (availableInput() > atom.length() && isalnum(_input[_offset + atom.length()])) {
+			return setError(Tokenizer::SyntaxError);
+		} else {
+			_offset += atom.length();
+			return setToken(token);
 		}
-
-		inline static const Token& readAtom(Tokenizer& self, const char* str, size_t len, const Token& token) noexcept {
-			if (self.availableInput() < len) {
-				return self.setError(Tokenizer::PrematureEndOfInput);
-			} else if (memcmp(currentInput(self), str, len) != 0) {
-				return self.setError(Tokenizer::InvalidByte);
-			} else {
-				self._input.offset += len;
-				return self.setToken(token);
-			}
-		}
-	};
+	}
 
 	Tokenizer::~Tokenizer() {
 	}
 
-	void Tokenizer::reset(const char* bytes, size_t length) noexcept {
-		_input.bytes = reinterpret_cast<const uint8_t*>(bytes);
-		_input.length = length;
-		_input.offset = 0;
-		_error.code = UnspecifiedError;
-		// Advance to first token
-		next();
-	}
-
-	const char* Tokenizer::errorMessage() const noexcept {
-		switch (_error.code) {
+	string_view Tokenizer::errorMessage() const noexcept {
+		switch (_error) {
 			case UnexpectedComma:
-				return "Unexpected comma";
+				return "Unexpected comma"sv;
 			case UnexpectedTrailingComma:
-				return "Unexpected trailing comma";
+				return "Unexpected trailing comma"sv;
 			case InvalidByte:
-				return "Invalid input byte";
+				return "Invalid input byte"sv;
 			case PrematureEndOfInput:
-				return "Premature end of input";
+				return "Premature end of input"sv;
 			case MalformedUnicodeEscapeSequence:
-				return "Malformed Unicode escape sequence";
+				return "Malformed Unicode escape sequence"sv;
 			case MalformedNumberLiteral:
-				return "Malformed number literal";
+				return "Malformed number literal"sv;
 			case UnterminatedString:
-				return "Unterminated string";
+				return "Unterminated string"sv;
 			case SyntaxError:
-				return "Illegal JSON (syntax error)";
+				return "Illegal JSON (syntax error)"sv;
 			default:
-				return "Unspecified error";
+				return "Unspecified error"sv;
 		}
 	}
 
@@ -69,8 +57,7 @@ namespace jsont {
 		if (!hasValue()) {
 			return string_view();
 		} else {
-			return string_view(reinterpret_cast<const char *>(_input.bytes) + _value.offset,
-			                   _value.length);
+			return _value;
 		}
 	}
 
@@ -79,22 +66,14 @@ namespace jsont {
 			return _token == jsont::True ? 1.0 : 0.0;
 		}
 
-		const char* bytes = reinterpret_cast<const char*>(_input.bytes) + _value.offset;
 		if (availableInput() == 0) {
 			// In this case where the data lies at the edge of the buffer, we can't pass
 			// it directly to atof, since there will be no sentinel byte. We are fine
 			// with a copy, since this is an edge case (only happens either for broken
 			// JSON or when the whole document is just a number).
-			char* buf[128];
-			if (_value.length > 127) {
-				// We are unable to interpret such a large literal in this edge-case
-				return nan("");
-			}
-			memcpy(buf, bytes, _value.length);
-			buf[_value.length] = '\0';
-			return strtod(reinterpret_cast<const char*>(buf), nullptr);
+			return stod(_value.to_string(), nullptr);
 		}
-		return strtod(bytes, nullptr);
+		return strtod(_value.data(), nullptr);
 	}
 
 	int64_t Tokenizer::intValue() const noexcept {
@@ -102,22 +81,14 @@ namespace jsont {
 			return _token == jsont::True ? 1LL : 0LL;
 		}
 
-		const char* bytes = reinterpret_cast<const char*>(_input.bytes) + _value.offset;
 		if (availableInput() == 0) {
 			// In this case where the data lies at the edge of the buffer, we can't pass
 			// it directly to atof, since there will be no sentinel byte. We are fine
 			// with a copy, since this is an edge case (only happens either for broken
 			// JSON or when the whole document is just a number).
-			char* buf[21];
-			if (_value.length > 20) {
-				// We are unable to interpret such a large literal in this edge-case
-				return 0;
-			}
-			memcpy(buf, bytes, _value.length);
-			buf[_value.length] = '\0';
-			return strtoll(reinterpret_cast<const char*>(buf), nullptr, 10);
+			return stoll(_value.to_string(), nullptr, 10);
 		}
-		return strtoll(bytes, nullptr, 10);
+		return strtoll(_value.data(), nullptr, 10);
 	}
 
 	const Token& Tokenizer::next() noexcept {
@@ -130,7 +101,8 @@ namespace jsont {
 		//         +- u l l
 		//
 		while (!endOfInput()) {
-			uint8_t b = _input.bytes[_input.offset++];
+			size_t token_start = _offset;
+			char b = _input[_offset++];
 			switch (b) {
 				case '{':
 					return setToken(ObjectStart);
@@ -151,11 +123,11 @@ namespace jsont {
 				}
 
 				case 'n':
-					return TokenizerInternal::readAtom(*this, "ull", 3, jsont::Null);
+					return readAtom("ull"sv, jsont::Null);
 				case 't':
-					return TokenizerInternal::readAtom(*this, "rue", 3, jsont::True);
+					return readAtom("rue"sv, jsont::True);
 				case 'f':
-					return TokenizerInternal::readAtom(*this, "alse", 4, jsont::False);
+					return readAtom("alse"sv, jsont::False);
 
 				case ' ':
 				case '\t':
@@ -173,33 +145,33 @@ namespace jsont {
 				// array or object terminator.
 
 				case '"': {
-					_value.beginAtOffset(_input.offset);
+					// Skip starting double quotes
+					token_start = _offset;
 
 					while (!endOfInput()) {
-						b = _input.bytes[_input.offset++];
-						assert(_input.offset < _input.length);
+						b = _input[_offset++];
 
 						if (b == '\\') {
 							if (endOfInput()) {
 								return setError(PrematureEndOfInput);
 							}
-							_input.offset++;
-							_value.length = _input.offset - _value.offset - 1;
+							_offset++;
 						} else if (b == '"') {
 							break;
 						} else if (b == 0) {
 							return setError(InvalidByte);
 						}
-					} // while (!endOfInput())
+					}
 
 					if (b != '"') {
 						return setError(UnterminatedString);
 					}
-					_value.length = _input.offset - _value.offset - 1;
+					// -1 to not include ending double quotes
+					_value = _input.substr(token_start, _offset - token_start - 1);
 
 					// is this a field name?
 					while (!endOfInput()) {
-						b = _input.bytes[_input.offset++];
+						b = _input[_offset++];
 						switch (b) {
 							case ' ':
 							case '\t':
@@ -212,7 +184,7 @@ namespace jsont {
 								return setToken(jsont::String);
 							case ']':
 							case '}': {
-								--_input.offset; // rewind
+								--_offset; // rewind
 								return setToken(jsont::String);
 							}
 							case 0:
@@ -237,11 +209,10 @@ namespace jsont {
 				default: {
 					if (isdigit(int(b)) || b == '+' || b == '-') {
 						// We are reading a number
-						_value.beginAtOffset(_input.offset-1);
 						Token token = jsont::Integer;
 
 						while (!endOfInput()) {
-							b = _input.bytes[_input.offset++];
+							b = _input[_offset++];
 							switch (b) {
 								case '0':
 								case '1':
@@ -267,16 +238,16 @@ namespace jsont {
 									break;
 								}
 								default: {
-									if ((_input.offset - _value.offset == 1) &&
-									        (_input.bytes[_value.offset] == '-' ||
-									         _input.bytes[_value.offset] == '+')) {
+									if (_offset - token_start == 1 &&
+									        (_input[token_start] == '-' ||
+									         _input[token_start] == '+')) {
 										return setError(MalformedNumberLiteral);
 									}
 
 									// rewind the byte that terminated this number literal
-									--_input.offset;
+									--_offset;
 
-									_value.length = _input.offset - _value.offset;
+									_value = _input.substr(token_start, _offset - token_start);
 									return setToken(token);
 								}
 							}

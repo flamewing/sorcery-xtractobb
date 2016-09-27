@@ -40,18 +40,15 @@
 #include <boost/interprocess/streams/bufferstream.hpp>
 
 // After c++17, these should be swapped.
-#if 0
-#include <experimental/string_view>
-#else
-#	include <boost/utility/string_ref.hpp>
+#if 1
+#	include <experimental/string_view>
 	namespace std {
-		using string_view = boost::string_ref;
+		using string_view = std::experimental::string_view;
 	}
-
-	inline constexpr std::string_view
-	operator""sv(const char* __str, size_t __len) {
-		return std::string_view{__str, __len};
-	}
+	using namespace std::experimental::string_view_literals;
+#else
+#	include <string_view>
+	using namespace std::literals::string_view_literals;
 #endif
 
 #include "prettyJson.h"
@@ -325,6 +322,9 @@ private:
 				}
 				tok = reader.next();
 				continue;
+			case jsont::Error:
+				cerr << reader.errorMessage() << endl;
+				break;
 			default:
 				break;
 			}
