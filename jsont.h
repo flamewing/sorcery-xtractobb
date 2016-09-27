@@ -127,7 +127,6 @@ namespace jsont {
 			void beginAtOffset(size_t z) noexcept;
 			size_t offset; // into _input.bytes
 			size_t length;
-			std::string buffer;
 		} _value;
 		Token _token;
 		struct {
@@ -184,7 +183,7 @@ namespace jsont {
 	}
 
 	inline const char* Tokenizer::inputBytes() const noexcept {
-		return (const char*)_input.bytes;
+		return reinterpret_cast<const char*>(_input.bytes);
 	}
 
 	inline void Tokenizer::Value::beginAtOffset(size_t z) noexcept {

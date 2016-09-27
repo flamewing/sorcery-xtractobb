@@ -34,7 +34,7 @@ namespace jsont {
 	}
 
 	void Tokenizer::reset(const char* bytes, size_t length) noexcept {
-		_input.bytes = (const uint8_t*)bytes;
+		_input.bytes = reinterpret_cast<const uint8_t*>(bytes);
 		_input.length = length;
 		_input.offset = 0;
 		_error.code = UnspecifiedError;
@@ -79,7 +79,7 @@ namespace jsont {
 			return _token == jsont::True ? 1.0 : 0.0;
 		}
 
-		const char* bytes = (const char*)_input.bytes + _value.offset;
+		const char* bytes = reinterpret_cast<const char*>(_input.bytes) + _value.offset;
 		if (availableInput() == 0) {
 			// In this case where the data lies at the edge of the buffer, we can't pass
 			// it directly to atof, since there will be no sentinel byte. We are fine
@@ -90,9 +90,9 @@ namespace jsont {
 				// We are unable to interpret such a large literal in this edge-case
 				return nan("");
 			}
-			memcpy((void*)buf, (const void*)bytes, _value.length);
+			memcpy(buf, bytes, _value.length);
 			buf[_value.length] = '\0';
-			return strtod((const char*)buf, nullptr);
+			return strtod(reinterpret_cast<const char*>(buf), nullptr);
 		}
 		return strtod(bytes, nullptr);
 	}
@@ -102,7 +102,7 @@ namespace jsont {
 			return _token == jsont::True ? 1LL : 0LL;
 		}
 
-		const char* bytes = (const char*)_input.bytes + _value.offset;
+		const char* bytes = reinterpret_cast<const char*>(_input.bytes) + _value.offset;
 		if (availableInput() == 0) {
 			// In this case where the data lies at the edge of the buffer, we can't pass
 			// it directly to atof, since there will be no sentinel byte. We are fine
@@ -113,9 +113,9 @@ namespace jsont {
 				// We are unable to interpret such a large literal in this edge-case
 				return 0;
 			}
-			memcpy((void*)buf, (const void*)bytes, _value.length);
+			memcpy(buf, bytes, _value.length);
 			buf[_value.length] = '\0';
-			return strtoll((const char*)buf, nullptr, 10);
+			return strtoll(reinterpret_cast<const char*>(buf), nullptr, 10);
 		}
 		return strtoll(bytes, nullptr, 10);
 	}
@@ -235,7 +235,7 @@ namespace jsont {
 				}
 
 				default: {
-					if (isdigit((int)b) || b == '+' || b == '-') {
+					if (isdigit(int(b)) || b == '+' || b == '-') {
 						// We are reading a number
 						_value.beginAtOffset(_input.offset-1);
 						Token token = jsont::Integer;

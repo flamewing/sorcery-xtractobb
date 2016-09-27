@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CXXFLAGS="-std=c++14 -Wall -Wextra -pedantic"
+CXXFLAGS="-std=c++14 -Wall -Wextra -pedantic -Wcast-qual -Wwrite-strings -Wredundant-decls -Wdisabled-optimization -fcheck-new -Wctor-dtor-privacy -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wuseless-cast -Wno-long-long"
 DEBUG_FLAGS=
 LIBS="-lboost_system -lboost_filesystem -lboost_iostreams"
 
