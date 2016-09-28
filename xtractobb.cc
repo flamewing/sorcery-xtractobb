@@ -419,6 +419,7 @@ int main(int argc, char *argv[]) {
 	string_view mainJsonName;
 	string_view mainJsonData, inkContentData;
 	bool mainJsonCompressed = false;
+	zlib_decompressor unzip(zlib::default_window_bits, 1*1024*1024);
 
 	it = oggview.cbegin() + htbl;
 	while (it != oggview.cend()) {
@@ -457,7 +458,7 @@ int main(int argc, char *argv[]) {
 			} else {
 				filtering_ostream fsout;
 				if (compressed) {
-					fsout.push(zlib_decompressor());
+					fsout.push(unzip);
 				}
 				if (outfile.extension() == ".json"s || outfile.extension() == ".inkcontent"s) {
 					fsout.push(json_filter(ePRETTY));
@@ -485,7 +486,7 @@ int main(int argc, char *argv[]) {
 				cout << "\33[2K\rCreating reference file "sv << outfile << "... "sv << flush;
 				filtering_ostream fsout;
 				if (mainJsonCompressed) {
-					fsout.push(zlib_decompressor());
+					fsout.push(unzip);
 				}
 				// TODO: Filter should receive OBB wrapper class and read inkcontent filename = indexed-content/filename
 				fsout.push(json_stitch_filter(inkContentData));
