@@ -78,54 +78,9 @@ using namespace boost::iostreams;
 typedef boost::interprocess::basic_vectorstream<std::vector<char> > vectorstream;
 typedef boost::interprocess::basic_ibufferstream<char> ibufferstream;
 
-#ifdef UNUSED
-#elif defined(__GNUC__)
-#	define UNUSED(x) UNUSED_ ## x __attribute__((unused))
-#elif defined(__LCLINT__)
-#	define UNUSED(x) /*@unused@*/ x
-#elif defined(__cplusplus)
-#	define UNUSED(x)
-#else
-#	define UNUSED(x) x
-#endif
-
-inline size_t Read1(istream &in) {
-	size_t c = static_cast<unsigned char>(in.get());
-	return c;
-}
-
-inline size_t Read1(string_view &in) {
-	size_t c = in[0];
-	in.remove_prefix(1);
-	return c;
-}
-
 template <typename T>
 inline size_t Read1(T &in) {
 	size_t c = static_cast<unsigned char>(*in++);
-	return c;
-}
-
-inline void Write1(ostream &out, size_t c) {
-	out.put(static_cast<char>(c & 0xff));
-}
-
-inline void Write1(char *&out, size_t c) {
-	*out++ = static_cast<char>(c & 0xff);
-}
-
-inline void Write1(unsigned char *&out, size_t c) {
-	*out++ = static_cast<char>(c & 0xff);
-}
-
-inline void Write1(string &out, size_t c) {
-	out.push_back(static_cast<char>(c & 0xff));
-}
-
-template <typename T>
-inline size_t Read2(T &in) {
-	size_t c = Read1(in);
-	c |= Read1(in) << 8;
 	return c;
 }
 
@@ -136,34 +91,6 @@ inline size_t Read4(T &in) {
 	c |= Read1(in) << 16;
 	c |= Read1(in) << 24;
 	return c;
-}
-
-template <typename T, int N>
-inline size_t ReadN(T &in) {
-	size_t c = 0;
-	for (size_t i = 0; i < 8 * N; i += 8)
-		c = c | (Read1(in) << i);
-	return c;
-}
-
-template <typename T>
-inline void Write2(T &out, size_t c) {
-	Write1(out, c & 0xff);
-	Write1(out, (c & 0xff00) >> 8);
-}
-
-template <typename T>
-inline void Write4(T &out, size_t c) {
-	Write1(out, (c & 0x000000ff));
-	Write1(out, (c & 0x0000ff00) >> 8);
-	Write1(out, (c & 0x00ff0000) >> 16);
-	Write1(out, (c & 0xff000000) >> 24);
-}
-
-template <typename T, int N>
-inline void WriteN(T &out, size_t c) {
-	for (size_t i = 0; i < 8 * N; i += 8)
-		Write1(out, (c >> i) & 0xff);
 }
 
 // JSON pretty-print filter for boost::filtering_ostream
