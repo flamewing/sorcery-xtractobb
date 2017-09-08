@@ -1,3 +1,5 @@
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/13717/badge.svg)](https://scan.coverity.com/projects/13717)
+
 Inkle Sorcery! Extractor
 ========================
 This software is capable of extracting the Android OBB files used in the Inkle Sorcery! series. It is possible that other Inkle games can also be extracted with this tool, but I did not test it.
