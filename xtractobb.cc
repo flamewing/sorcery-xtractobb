@@ -285,145 +285,149 @@ enum ErrorCodes {
 };
 
 int main(int argc, char *argv[]) {
-	if (argc != 3) {
-		cerr << "Usage: "sv << argv[0] << " inputfile outputdir"sv << endl << endl;
-		return eWRONG_ARGC;
-	}
-
-	path const obbfile(argv[1]);
-	if (!exists(obbfile)) {
-		cerr << "File "sv << obbfile << " does not exist!"sv << endl << endl;
-		return eOBB_NOT_FOUND;
-	} else if (!is_regular_file(obbfile)) {
-		cerr << "Path "sv << obbfile << " must be a file!"sv << endl << endl;
-		return eOBB_NOT_FILE;
-	}
-
-	path const outdir(argv[2]);
-	if (exists(outdir)) {
-		if (!is_directory(outdir)) {
-			cerr << "Path "sv << outdir << " must be a directory!"sv << endl << endl;
-			return eOUTPUT_NOT_DIR;
+	try {
+		if (argc != 3) {
+			cerr << "Usage: "sv << argv[0] << " inputfile outputdir"sv << endl << endl;
+			return eWRONG_ARGC;
 		}
-	} else {
-		create_directories(outdir);
-		if (!is_directory(outdir)) {
-			cerr << "Could not create output directory "sv << outdir << "!"sv << endl << endl;
-			return eOUTPUT_NO_ACCESS;
+
+		path const obbfile(argv[1]);
+		if (!exists(obbfile)) {
+			cerr << "File "sv << obbfile << " does not exist!"sv << endl << endl;
+			return eOBB_NOT_FOUND;
+		} else if (!is_regular_file(obbfile)) {
+			cerr << "Path "sv << obbfile << " must be a file!"sv << endl << endl;
+			return eOBB_NOT_FILE;
 		}
-	}
 
-	ifstream fin(obbfile, ios::in|ios::binary);
-	if (!fin.good()) {
-		cerr << "Could not open input file "sv << obbfile << "!"sv << endl << endl;
-		return eOBB_NO_ACCESS;
-	}
-
-	unsigned const len = file_size(obbfile);
-	string obbcontents;
-	obbcontents.resize(len);
-	fin.read(&obbcontents[0], len);
-	fin.close();
-
-	string_view const oggview(obbcontents);
-	if (oggview.substr(0, 8) != "AP_Pack!"sv) {
-		cerr << "Input file missing signature!"sv << endl << endl;
-		return eOBB_INVALID;
-	}
-
-	string_view::const_iterator it = oggview.cbegin() + 8;
-	unsigned const hlen = Read4(it), htbl = Read4(it);
-	if (len != hlen) {
-		cerr << "Incorrect length in header!"sv << endl << endl;
-		return eOBB_CORRUPT;
-	}
-
-	// TODO: Main json file should be found from Info.plist file: main json filename = dict["StoryFilename"sv] + (dict["SorceryPartNumber"sv] == "3"sv ? ".json"sv : ".minjson"sv)
-	regex const mainJsonRegex("Sorcery\\d\\.(min)?json"s);
-	// TODO: inkcontent filename should be found from main json: inkcontent filename = indexed-content/filename
-	regex const inkContentRegex("Sorcery\\d\\.inkcontent"s);
-
-	string_view mainJsonName;
-	string_view mainJsonData, inkContentData;
-	bool mainJsonCompressed = false;
-	zlib_decompressor unzip(zlib::default_window_bits, 1*1024*1024);
-
-	it = oggview.cbegin() + htbl;
-	while (it != oggview.cend()) {
-		unsigned fnameptr = Read4(it), fnamelen = Read4(it),
-		         fdataptr = Read4(it), fdatalen = Read4(it);
-		string_view fname(oggview.substr(fnameptr, fnamelen));
-		string_view fdata(oggview.substr(fdataptr, fdatalen));
-		bool const compressed = fdata.size() != Read4(it);
-
-		// TODO: These should be obtained by name from OBB wrapper when class is implemented.
-		if (regex_match(fname.cbegin(), fname.cend(), mainJsonRegex)) {
-			mainJsonName = fname;
-			mainJsonData = fdata;
-			mainJsonCompressed = compressed;
-			cout << "\33[2K\rFound main json : "sv << fname << endl;
-		} else if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
-			inkContentData = fdata;
-			cout << "\33[2K\rFound inkcontent: "sv << fname << endl;
-		}
-		cout << "\33[2K\rExtracting file "sv << fname.to_string() << flush;
-
-		path outfile(outdir / fname.to_string());
-		path const parentdir(outfile.parent_path());
-
-		if (!exists(parentdir) && !create_directories(parentdir)) {
-			cout << "\33[2K\r"sv << flush;
-			cerr << "Could not create directory "sv << parentdir << " for file "sv << outfile << "!"sv << endl;
-		} else {
-			if (outfile.extension() == ".minjson"s) {
-				outfile.replace_extension(".json"s);
+		path const outdir(argv[2]);
+		if (exists(outdir)) {
+			if (!is_directory(outdir)) {
+				cerr << "Path "sv << outdir << " must be a directory!"sv << endl << endl;
+				return eOUTPUT_NOT_DIR;
 			}
-			ofstream fout(outfile, ios::out|ios::binary);
-			if (!fout.good()) {
+		} else {
+			create_directories(outdir);
+			if (!is_directory(outdir)) {
+				cerr << "Could not create output directory "sv << outdir << "!"sv << endl << endl;
+				return eOUTPUT_NO_ACCESS;
+			}
+		}
+
+		ifstream fin(obbfile, ios::in|ios::binary);
+		if (!fin.good()) {
+			cerr << "Could not open input file "sv << obbfile << "!"sv << endl << endl;
+			return eOBB_NO_ACCESS;
+		}
+
+		unsigned const len = file_size(obbfile);
+		string obbcontents;
+		obbcontents.resize(len);
+		fin.read(&obbcontents[0], len);
+		fin.close();
+
+		string_view const oggview(obbcontents);
+		if (oggview.substr(0, 8) != "AP_Pack!"sv) {
+			cerr << "Input file missing signature!"sv << endl << endl;
+			return eOBB_INVALID;
+		}
+
+		string_view::const_iterator it = oggview.cbegin() + 8;
+		unsigned const hlen = Read4(it), htbl = Read4(it);
+		if (len != hlen) {
+			cerr << "Incorrect length in header!"sv << endl << endl;
+			return eOBB_CORRUPT;
+		}
+
+		// TODO: Main json file should be found from Info.plist file: main json filename = dict["StoryFilename"sv] + (dict["SorceryPartNumber"sv] == "3"sv ? ".json"sv : ".minjson"sv)
+		regex const mainJsonRegex(R"regex(Sorcery\d\.(min)?json)regex"s);
+		// TODO: inkcontent filename should be found from main json: inkcontent filename = indexed-content/filename
+		regex const inkContentRegex(R"regex(Sorcery\d\.inkcontent)regex"s);
+
+		string_view mainJsonName;
+		string_view mainJsonData, inkContentData;
+		bool mainJsonCompressed = false;
+		zlib_decompressor unzip(zlib::default_window_bits, 1*1024*1024);
+
+		it = oggview.cbegin() + htbl;
+		while (it != oggview.cend()) {
+			unsigned fnameptr = Read4(it), fnamelen = Read4(it),
+				     fdataptr = Read4(it), fdatalen = Read4(it);
+			string_view fname(oggview.substr(fnameptr, fnamelen));
+			string_view fdata(oggview.substr(fdataptr, fdatalen));
+			bool const compressed = fdata.size() != Read4(it);
+
+			// TODO: These should be obtained by name from OBB wrapper when class is implemented.
+			if (regex_match(fname.cbegin(), fname.cend(), mainJsonRegex)) {
+				mainJsonName = fname;
+				mainJsonData = fdata;
+				mainJsonCompressed = compressed;
+				cout << "\33[2K\rFound main json : "sv << fname << endl;
+			} else if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
+				inkContentData = fdata;
+				cout << "\33[2K\rFound inkcontent: "sv << fname << endl;
+			}
+			cout << "\33[2K\rExtracting file "sv << fname.to_string() << flush;
+
+			path outfile(outdir / fname.to_string());
+			path const parentdir(outfile.parent_path());
+
+			if (!exists(parentdir) && !create_directories(parentdir)) {
 				cout << "\33[2K\r"sv << flush;
-				cerr << "Could not create file "sv << outfile << "!"sv << endl;
+				cerr << "Could not create directory "sv << parentdir << " for file "sv << outfile << "!"sv << endl;
 			} else {
-				filtering_ostream fsout;
-				if (compressed) {
-					fsout.push(unzip);
+				if (outfile.extension() == ".minjson"s) {
+					outfile.replace_extension(".json"s);
 				}
-				if (outfile.extension() == ".json"s || outfile.extension() == ".inkcontent"s) {
+				ofstream fout(outfile, ios::out|ios::binary);
+				if (!fout.good()) {
+					cout << "\33[2K\r"sv << flush;
+					cerr << "Could not create file "sv << outfile << "!"sv << endl;
+				} else {
+					filtering_ostream fsout;
+					if (compressed) {
+						fsout.push(unzip);
+					}
+					if (outfile.extension() == ".json"s || outfile.extension() == ".inkcontent"s) {
+						fsout.push(json_filter(ePRETTY));
+					}
+					fsout.push(fout);
+					fsout << fdata;
+				}
+			}
+		}
+
+		if (mainJsonData.size() != 0u && inkContentData.size() != 0u) {
+			string const fname = mainJsonName.substr(0, "SorceryN"sv.size()).to_string() + "-Reference.json"s;
+			path const outfile(outdir / fname);
+			path const parentdir(outfile.parent_path());
+
+			if (!exists(parentdir) && !create_directories(parentdir)) {
+				cout << "\33[2K\r"sv << flush;
+				cerr << "Could not create directory "sv << parentdir << " for file "sv << outfile << "!"sv << endl;
+			} else {
+				ofstream fout(outfile, ios::out|ios::binary);
+				if (!fout.good()) {
+					cout << "\33[2K\r"sv << flush;
+					cerr << "Could not create file "sv << outfile << "!"sv << endl;
+				} else {
+					cout << "\33[2K\rCreating reference file "sv << outfile << "... "sv << flush;
+					filtering_ostream fsout;
+					if (mainJsonCompressed) {
+						fsout.push(unzip);
+					}
+					// TODO: Filter should receive OBB wrapper class and read inkcontent filename = indexed-content/filename
+					fsout.push(json_stitch_filter(inkContentData));
 					fsout.push(json_filter(ePRETTY));
+					fsout.push(fout);
+					fsout << mainJsonData;
+					cout << "done."sv << flush;
 				}
-				fsout.push(fout);
-				fsout << fdata;
 			}
 		}
+		cout << endl;
+	} catch (std::exception const& except) {
+		cerr << except.what() << endl;
 	}
-
-	if (mainJsonData.size() != 0u && inkContentData.size() != 0u) {
-		string const fname = mainJsonName.substr(0, "SorceryN"sv.size()).to_string() + "-Reference.json"s;
-		path const outfile(outdir / fname);
-		path const parentdir(outfile.parent_path());
-
-		if (!exists(parentdir) && !create_directories(parentdir)) {
-			cout << "\33[2K\r"sv << flush;
-			cerr << "Could not create directory "sv << parentdir << " for file "sv << outfile << "!"sv << endl;
-		} else {
-			ofstream fout(outfile, ios::out|ios::binary);
-			if (!fout.good()) {
-				cout << "\33[2K\r"sv << flush;
-				cerr << "Could not create file "sv << outfile << "!"sv << endl;
-			} else {
-				cout << "\33[2K\rCreating reference file "sv << outfile << "... "sv << flush;
-				filtering_ostream fsout;
-				if (mainJsonCompressed) {
-					fsout.push(unzip);
-				}
-				// TODO: Filter should receive OBB wrapper class and read inkcontent filename = indexed-content/filename
-				fsout.push(json_stitch_filter(inkContentData));
-				fsout.push(json_filter(ePRETTY));
-				fsout.push(fout);
-				fsout << mainJsonData;
-				cout << "done."sv << flush;
-			}
-		}
-	}
-	cout << endl;
 	return eOK;
 }
