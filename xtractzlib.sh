@@ -1,6 +1,6 @@
 #!/bin/bash
 
-find "$1" -iname '*.inf' | while read ff; do
+find "$1" -iname '*.inf' | while read -r ff; do
 	baseff="${ff%.inf}"
 	if [[ ! -f "$baseff.cmp" ]]; then
 		mv "$baseff" "$baseff.cmp"
