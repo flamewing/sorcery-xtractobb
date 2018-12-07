@@ -105,6 +105,7 @@ namespace jsont {
 
 		// Total number of input bytes
 		size_t inputSize() const noexcept;
+
 	private:
 		const Token& readAtom(std::string_view atom, const Token& token) noexcept;
 		size_t availableInput() const noexcept;
