@@ -133,6 +133,7 @@ private:
 	typedef aggregate_filter<Ch, Alloc> base_type;
 	typedef typename base_type::vector_type vector_type;
 	static vectorstream sint;
+
 public:
 	typedef typename base_type::char_type char_type;
 	typedef typename base_type::category category;
@@ -140,6 +141,7 @@ public:
 	// TODO: Filter should receive output directory instead.
 	basic_json_stitch_filter(string_view const& _inkContent) : inkContent(_inkContent) {
 	}
+
 private:
 	void do_filter(vector_type const& src, vector_type& dest) {
 		if (src.empty()) {
