@@ -12,7 +12,7 @@ else
 	DEBUG_FLAGS="-O3 -s"
 fi
 echo $DEBUG_FLAGS
-rm -f *~
+rm -f ./*~
 g++ $CXXFLAGS $DEBUG_FLAGS -o xtractobb xtractobb.cc jsont.cc $LIBS
 g++ $CXXFLAGS $DEBUG_FLAGS -o pretty-print-json pretty-print-json.cc jsont.cc $LIBS
 
