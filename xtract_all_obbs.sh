@@ -16,9 +16,9 @@ rm -rf sorcery{1,2,3,4}{obb,json}
 
 mkdir -p sorcery{1,2,3,4}json/FightScenes
 for linkdir in 1 2 3 4; do
-	find sorcery${linkdir}obb -iname '*.json' -or -iname '*.inkcontent' | while read ff; do
+	find sorcery${linkdir}obb -iname '*.json' -or -iname '*.inkcontent' | while read -r ff; do
 		link=sorcery${linkdir}json/${ff#sorcery${linkdir}obb/}
-		ln -fns `pwd`/$ff $link
+		ln -fns $(pwd)/$ff $link
 	done
 done
 
