@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/flamewing/sorcery-xtractobb.svg?branch=master)](https://travis-ci.org/flamewing/sorcery-xtractobb)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/13717/badge.svg)](https://scan.coverity.com/projects/13717)
+[![CodeFactor](https://www.codefactor.io/repository/github/flamewing/sorcery-xtractobb/badge)](https://www.codefactor.io/repository/github/flamewing/sorcery-xtractobb)
 
 Inkle Sorcery! Extractor
 ========================
