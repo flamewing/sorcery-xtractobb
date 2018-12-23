@@ -22,17 +22,8 @@
 
 #include <boost/iostreams/stream.hpp>
 
-// After c++17, these should be swapped.
-#if 1
-#	include <experimental/string_view>
-	namespace std {
-		using string_view = std::experimental::string_view;
-	}
-	using namespace std::experimental::string_view_literals;
-#else
-#	include <string_view>
-	using namespace std::literals::string_view_literals;
-#endif
+#include <string_view>
+using namespace std::literals::string_view_literals;
 
 #include "prettyJson.h"
 
@@ -47,8 +38,9 @@ using std::string_view;
 
 using namespace std::literals::string_literals;
 
-using namespace boost::filesystem;
-using namespace boost::iostreams;
+using boost::filesystem::path;
+using boost::filesystem::ifstream;
+using boost::filesystem::ofstream;
 
 #ifdef UNUSED
 #elif defined(__GNUC__)
@@ -90,7 +82,8 @@ int main(int argc, char *argv[]) {
 	if (type == "-h"sv) {
 		usage(cout, program);
 		return eOK;
-	} else if (type == "-p"sv) {
+	}
+	if (type == "-p"sv) {
 		pretty = ePRETTY;
 	} else if (type == "-w"sv) {
 		pretty = eNO_WHITESPACE;
@@ -108,13 +101,14 @@ int main(int argc, char *argv[]) {
 			cerr << "File "sv << jsonfile << " does not exist!"sv << endl << endl;
 			num_errors++;
 			continue;
-		} else if (!is_regular_file(jsonfile)) {
+		}
+		if (!is_regular_file(jsonfile)) {
 			cerr << "Path "sv << jsonfile << " must be a file!"sv << endl << endl;
 			num_errors++;
 			continue;
 		}
 
-		unsigned const len = file_size(jsonfile);
+		size_t const len = file_size(jsonfile);
 		ifstream fin(jsonfile, ios::in);
 		if (!fin.good()) {
 			cerr << "Could not open input file "sv << jsonfile << " for reading!"sv << endl << endl;
@@ -123,7 +117,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		vector<char> buf(len);
-		fin.read(&buf[0], len);
+		fin.read(&buf[0], static_cast<std::streamsize>(len));
 		fin.close();
 
 		ofstream fout(jsonfile, ios::out);

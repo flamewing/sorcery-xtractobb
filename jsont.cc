@@ -9,25 +9,32 @@
  */
 #include "jsont.h"
 
+using std::stod;
+using std::stoll;
 using std::string;
 using std::string_view;
+using namespace std::literals::string_view_literals;
 
 namespace jsont {
+	static inline bool safe_isalnum(const char c) {
+		return isalnum(static_cast<unsigned char>(c)) != 0;
+	}
+	static inline bool safe_isdigit(const char c) {
+		return isdigit(static_cast<unsigned char>(c)) != 0;
+	}
 
 	inline const Token& Tokenizer::readAtom(string_view atom, const Token& token) noexcept {
 		if (availableInput() < atom.length()) {
 			return setError(Tokenizer::PrematureEndOfInput);
-		} else if (_input.compare(_offset, atom.length(), atom) != 0) {
-			return setError(Tokenizer::InvalidByte);
-		} else if (availableInput() > atom.length() && isalnum(_input[_offset + atom.length()])) {
-			return setError(Tokenizer::SyntaxError);
-		} else {
-			_offset += atom.length();
-			return setToken(token);
 		}
-	}
-
-	Tokenizer::~Tokenizer() {
+		if (_input.compare(_offset, atom.length(), atom) != 0) {
+			return setError(Tokenizer::InvalidByte);
+		}
+		if (availableInput() > atom.length() && safe_isalnum(_input[_offset + atom.length()])) {
+			return setError(Tokenizer::SyntaxError);
+		}
+		_offset += atom.length();
+		return setToken(token);
 	}
 
 	string_view Tokenizer::errorMessage() const noexcept {
@@ -48,17 +55,17 @@ namespace jsont {
 				return "Unterminated string"sv;
 			case SyntaxError:
 				return "Illegal JSON (syntax error)"sv;
-			default:
+			case UnspecifiedError:
 				return "Unspecified error"sv;
 		}
+		return "Unspecified error"sv;
 	}
 
 	string_view Tokenizer::dataValue() const noexcept {
 		if (!hasValue()) {
 			return string_view();
-		} else {
-			return _value;
 		}
+		return _value;
 	}
 
 	double Tokenizer::floatValue() const noexcept {
@@ -71,7 +78,7 @@ namespace jsont {
 			// it directly to atof, since there will be no sentinel byte. We are fine
 			// with a copy, since this is an edge case (only happens either for broken
 			// JSON or when the whole document is just a number).
-			return stod(_value.to_string(), nullptr);
+			return stod(string(_value), nullptr);
 		}
 		return strtod(_value.data(), nullptr);
 	}
@@ -80,15 +87,15 @@ namespace jsont {
 		if (!hasValue()) {
 			return _token == jsont::True ? 1LL : 0LL;
 		}
-
+		constexpr const int base10 = 10;
 		if (availableInput() == 0) {
 			// In this case where the data lies at the edge of the buffer, we can't pass
 			// it directly to atof, since there will be no sentinel byte. We are fine
 			// with a copy, since this is an edge case (only happens either for broken
 			// JSON or when the whole document is just a number).
-			return stoll(_value.to_string(), nullptr, 10);
+			return stoll(string(_value), nullptr, base10);
 		}
-		return strtoll(_value.data(), nullptr, 10);
+		return strtoll(_value.data(), nullptr, base10);
 	}
 
 	const Token& Tokenizer::next() noexcept {
@@ -207,7 +214,7 @@ namespace jsont {
 				}
 
 				default: {
-					if (isdigit(int(b)) || b == '+' || b == '-') {
+					if (safe_isdigit(b) || b == '+' || b == '-') {
 						// We are reading a number
 						Token token = jsont::Integer;
 
@@ -253,9 +260,8 @@ namespace jsont {
 							}
 						}
 						return setToken(End);
-					} else {
-						return setError(InvalidByte);
 					}
+					return setError(InvalidByte);
 				}
 			}
 		}

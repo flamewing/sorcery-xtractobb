@@ -39,29 +39,18 @@
 #include <boost/interprocess/streams/vectorstream.hpp>
 #include <boost/interprocess/streams/bufferstream.hpp>
 
-// After c++17, these should be swapped.
-#if 1
-#	include <experimental/string_view>
-	namespace std {
-		using string_view = std::experimental::string_view;
-	}
-	using namespace std::experimental::string_view_literals;
-#else
-#	include <string_view>
-	using namespace std::literals::string_view_literals;
-#endif
+#include <string_view>
+using namespace std::literals::string_view_literals;
 
 #include "prettyJson.h"
 #include "jsont.h"
 
 using std::allocator;
-using std::copy;
 using std::cout;
 using std::cerr;
 using std::endl;
 using std::flush;
 using std::ios;
-using std::ws;
 using std::istream;
 using std::ostream;
 using std::regex;
@@ -72,11 +61,27 @@ using std::string_view;
 
 using namespace std::literals::string_literals;
 
-using namespace boost::filesystem;
-using namespace boost::iostreams;
+using boost::filesystem::path;
+using boost::filesystem::ifstream;
+using boost::filesystem::ofstream;
+using boost::iostreams::aggregate_filter;
+using boost::iostreams::filtering_ostream;
+using boost::iostreams::zlib_decompressor;
+namespace zlib = boost::iostreams::zlib;
 
-typedef boost::interprocess::basic_vectorstream<std::vector<char> > vectorstream;
-typedef boost::interprocess::basic_ibufferstream<char> ibufferstream;
+using vectorstream = boost::interprocess::basic_vectorstream<std::vector<char> >;
+using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
+
+// Utility to convert "fancy pointer" to pointer (ported from C++20).
+template <typename T>
+__attribute__((always_inline,const)) inline constexpr T* to_address(T* in) noexcept {
+	return in;
+}
+
+template <typename Iter>
+__attribute__((always_inline,pure)) inline constexpr auto to_address(Iter in) {
+	return to_address(in.operator->());
+}
 
 template <typename T>
 inline size_t Read1(T &in) {
@@ -85,29 +90,38 @@ inline size_t Read1(T &in) {
 }
 
 template <typename T>
-inline size_t Read4(T &in) {
-	size_t c = Read1(in);
-	c |= Read1(in) << 8;
-	c |= Read1(in) << 16;
-	c |= Read1(in) << 24;
-	return c;
+inline uint32_t Read4(T &in) {
+	auto ptr{to_address(in)};
+	alignas(alignof(uint32_t)) uint8_t buf[sizeof(uint32_t)];
+	uint32_t val;
+	std::memcpy(&buf[0], ptr, sizeof(uint32_t));
+	std::memcpy(&val, &buf[0], sizeof(uint32_t));
+	std::advance(in, sizeof(uint32_t));
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+	return val;
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	return __builtin_bswap32(val);
+#else
+	#error "Byte order is neither little endian nor big endian. Do not know how to proceed."
+	return val;
+#endif
 }
 
 // JSON pretty-print filter for boost::filtering_ostream
 template<typename Ch, typename Alloc = std::allocator<Ch>>
 class basic_json_filter : public aggregate_filter<Ch, Alloc> {
 private:
-	typedef aggregate_filter<Ch, Alloc> base_type;
+	using base_type = aggregate_filter<Ch, Alloc>;
 	static vectorstream sint;
 public:
-	typedef typename base_type::char_type char_type;
-	typedef typename base_type::category category;
+	using char_type = typename base_type::char_type;
+	using category = typename base_type::category;
 
-	basic_json_filter(PrettyJSON _pretty) : pretty(_pretty) {
+	explicit basic_json_filter(PrettyJSON _pretty) : pretty(_pretty) {
 	}
 private:
-	typedef typename base_type::vector_type vector_type;
-	void do_filter(vector_type const& src, vector_type& dest) {
+	using vector_type = typename base_type::vector_type;
+	void do_filter(vector_type const& src, vector_type& dest) final {
 		if (src.empty()) {
 			return;
 		}
@@ -120,8 +134,8 @@ private:
 };
 BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
 
-typedef basic_json_filter<char>    json_filter;
-typedef basic_json_filter<wchar_t> wjson_filter;
+using json_filter = basic_json_filter<char>;
+using wjson_filter = basic_json_filter<wchar_t>;
 
 template <typename Ch, typename Alloc>
 vectorstream basic_json_filter<Ch, Alloc>::sint;
@@ -130,27 +144,27 @@ vectorstream basic_json_filter<Ch, Alloc>::sint;
 template<typename Ch, typename Alloc = std::allocator<Ch>>
 class basic_json_stitch_filter : public aggregate_filter<Ch, Alloc> {
 private:
-	typedef aggregate_filter<Ch, Alloc> base_type;
-	typedef typename base_type::vector_type vector_type;
+	using base_type = aggregate_filter<Ch, Alloc>;
+	using vector_type = typename base_type::vector_type;
 	static vectorstream sint;
 
 public:
-	typedef typename base_type::char_type char_type;
-	typedef typename base_type::category category;
+	using char_type = typename base_type::char_type;
+	using category = typename base_type::category;
 
 	// TODO: Filter should receive output directory instead.
-	basic_json_stitch_filter(string_view const& _inkContent) : inkContent(_inkContent) {
+	explicit basic_json_stitch_filter(string_view const& _inkContent) : inkContent(_inkContent) {
 	}
 
 private:
-	void do_filter(vector_type const& src, vector_type& dest) {
+	void do_filter(vector_type const& src, vector_type& dest) final {
 		if (src.empty()) {
 			return;
 		}
 
 		sint.reserve(src.size()*3/2);
 		jsont::Tokenizer reader(src.data(), src.size());
-		size_t indent = 0u;
+		size_t indent = 0;
 		jsont::Token tok = reader.current();
 		while (tok != jsont::End) {
 			switch (tok) {
@@ -227,7 +241,8 @@ private:
 								assert(tok == jsont::String);
 								string_view slice = reader.dataValue();
 								ibufferstream sptr(slice.data(), slice.length());
-								unsigned offset, length;
+								unsigned offset;
+								unsigned length;
 								sptr >> offset >> length;
 								string_view stitch(inkContent.substr(offset, length));
 
@@ -254,7 +269,8 @@ private:
 			case jsont::Error:
 				cerr << reader.errorMessage() << endl;
 				break;
-			default:
+			case jsont::_Comma:
+			case jsont::End:
 				break;
 			}
 			tok = reader.next();
@@ -268,8 +284,8 @@ private:
 };
 BOOST_IOSTREAMS_PIPABLE(basic_json_stitch_filter, 2)
 
-typedef basic_json_stitch_filter<char>    json_stitch_filter;
-typedef basic_json_stitch_filter<wchar_t> wjson_stitch_filter;
+using json_stitch_filter = basic_json_stitch_filter<char>;
+using wjson_stitch_filter = basic_json_stitch_filter<wchar_t>;
 
 template <typename Ch, typename Alloc>
 vectorstream basic_json_stitch_filter<Ch, Alloc>::sint;
@@ -322,10 +338,10 @@ int main(int argc, char *argv[]) {
 			return eOBB_NO_ACCESS;
 		}
 
-		unsigned const len = file_size(obbfile);
+		size_t const len = file_size(obbfile);
 		string obbcontents;
 		obbcontents.resize(len);
-		fin.read(&obbcontents[0], len);
+		fin.read(&obbcontents[0], static_cast<std::streamsize>(len));
 		fin.close();
 
 		string_view const oggview(obbcontents);
@@ -335,7 +351,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		string_view::const_iterator it = oggview.cbegin() + 8;
-		unsigned const hlen = Read4(it), htbl = Read4(it);
+		unsigned const hlen = Read4(it);
+		unsigned const htbl = Read4(it);
 		if (len != hlen) {
 			cerr << "Incorrect length in header!"sv << endl << endl;
 			return eOBB_CORRUPT;
@@ -347,14 +364,17 @@ int main(int argc, char *argv[]) {
 		regex const inkContentRegex(R"regex(Sorcery\d\.inkcontent)regex"s);
 
 		string_view mainJsonName;
-		string_view mainJsonData, inkContentData;
+		string_view mainJsonData;
+		string_view inkContentData;
 		bool mainJsonCompressed = false;
 		zlib_decompressor unzip(zlib::default_window_bits, 1*1024*1024);
 
 		it = oggview.cbegin() + htbl;
 		while (it != oggview.cend()) {
-			unsigned fnameptr = Read4(it), fnamelen = Read4(it),
-				     fdataptr = Read4(it), fdatalen = Read4(it);
+			unsigned fnameptr = Read4(it);
+			unsigned fnamelen = Read4(it);
+			unsigned fdataptr = Read4(it);
+			unsigned fdatalen = Read4(it);
 			string_view fname(oggview.substr(fnameptr, fnamelen));
 			string_view fdata(oggview.substr(fdataptr, fdatalen));
 			bool const compressed = fdata.size() != Read4(it);
@@ -369,9 +389,9 @@ int main(int argc, char *argv[]) {
 				inkContentData = fdata;
 				cout << "\33[2K\rFound inkcontent: "sv << fname << endl;
 			}
-			cout << "\33[2K\rExtracting file "sv << fname.to_string() << flush;
+			cout << "\33[2K\rExtracting file "sv << fname << flush;
 
-			path outfile(outdir / fname.to_string());
+			path outfile(outdir / string(fname));
 			path const parentdir(outfile.parent_path());
 
 			if (!exists(parentdir) && !create_directories(parentdir)) {
@@ -399,8 +419,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		if (mainJsonData.size() != 0u && inkContentData.size() != 0u) {
-			string const fname = mainJsonName.substr(0, "SorceryN"sv.size()).to_string() + "-Reference.json"s;
+		if (!mainJsonData.empty() && !inkContentData.empty()) {
+			string const fname = string(mainJsonName.substr(0, "SorceryN"sv.size())) + "-Reference.json"s;
 			path const outfile(outdir / fname);
 			path const parentdir(outfile.parent_path());
 

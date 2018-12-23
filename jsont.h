@@ -11,18 +11,7 @@
 #define JSONT_CXX_INCLUDED
 
 #include <string>
-
-// After c++17, these should be swapped.
-#if 1
-#	include <experimental/string_view>
-	namespace std {
-		using string_view = std::experimental::string_view;
-	}
-	using namespace std::experimental::string_view_literals;
-#else
-#	include <string_view>
-	using namespace std::literals::string_view_literals;
-#endif
+#include <string_view>
 
 namespace jsont {
 	// Tokens
@@ -40,15 +29,14 @@ namespace jsont {
 		String,        // string value
 		FieldName,     // field name
 		Error,         // An error occured (see `error()` for details)
-		_Comma,
+		_Comma
 	};
 
 	// Reads a sequence of bytes and produces tokens and values while doing so
 	class Tokenizer {
 	public:
 		Tokenizer(const char* bytes, size_t length) noexcept;
-		Tokenizer(std::string_view slice) noexcept;
-		~Tokenizer() noexcept;
+		explicit Tokenizer(std::string_view slice) noexcept;
 
 		// Read next token
 		const Token& next() noexcept;
@@ -90,7 +78,7 @@ namespace jsont {
 			MalformedUnicodeEscapeSequence,
 			MalformedNumberLiteral,
 			UnterminatedString,
-			SyntaxError,
+			SyntaxError
 		};
 
 		// Returns the error code of the last error
@@ -109,7 +97,7 @@ namespace jsont {
 	private:
 		const Token& readAtom(std::string_view atom, const Token& token) noexcept;
 		size_t availableInput() const noexcept;
-		size_t endOfInput() const noexcept;
+		bool endOfInput() const noexcept;
 		const Token& setToken(Token t) noexcept;
 		const Token& setError(ErrorCode error) noexcept;
 
@@ -123,12 +111,12 @@ namespace jsont {
 	// ------------------- internal ---------------------
 
 	inline Tokenizer::Tokenizer(const char* bytes, size_t length) noexcept
-	: _token(End) {
+	: _offset(0), _token(End), _error(UnspecifiedError) {
 		reset(bytes, length);
 	}
 
 	inline Tokenizer::Tokenizer(std::string_view slice) noexcept
-	: _token(End) {
+	: _offset(0), _token(End), _error(UnspecifiedError) {
 		reset(slice);
 	}
 
@@ -153,7 +141,7 @@ namespace jsont {
 	}
 
 	inline std::string Tokenizer::stringValue() const noexcept {
-		return dataValue().to_string();
+		return std::string(dataValue());
 	}
 
 	inline bool Tokenizer::boolValue() const noexcept {
@@ -164,7 +152,7 @@ namespace jsont {
 		return _input.length() - _offset;
 	}
 
-	inline size_t Tokenizer::endOfInput() const noexcept {
+	inline bool Tokenizer::endOfInput() const noexcept {
 		return _offset == _input.length();
 	}
 
