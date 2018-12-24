@@ -64,8 +64,10 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
 				sint << '\n';
 			}
 		};
-	while (tok != jsont::End) {
+	while (true) {
 		switch (tok) {
+		case jsont::End:
+			return;
 		case jsont::ObjectStart:
 		case jsont::ArrayStart: {
 			printIndentedValue(printValueRaw, false);
@@ -101,7 +103,6 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
 			std::cerr << reader.errorMessage() << std::endl;
 			break;
 		case jsont::_Comma:
-		case jsont::End:
 			break;
 		}
 		tok = reader.next();
@@ -110,6 +111,7 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
 		}
 		lineBreak();
 	}
+	__builtin_unreachable();
 }
 
 #endif // PRETTY_JSON_H

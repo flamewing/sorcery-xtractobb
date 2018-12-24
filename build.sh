@@ -5,7 +5,7 @@ DEBUG_FLAGS=
 LIBS="-lboost_system -lboost_filesystem -lboost_iostreams"
 
 if [[ "$1" == "debug" ]]; then
-	DEBUG_FLAGS="-O0 -g3"
+	DEBUG_FLAGS="-O0 -ggdb3"
 elif [[ "$1" == "gprof" ]]; then
 	DEBUG_FLAGS="-O3 -g3"
 else

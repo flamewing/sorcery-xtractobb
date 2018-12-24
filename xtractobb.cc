@@ -112,7 +112,6 @@ template<typename Ch, typename Alloc = std::allocator<Ch>>
 class basic_json_filter : public aggregate_filter<Ch, Alloc> {
 private:
 	using base_type = aggregate_filter<Ch, Alloc>;
-	static vectorstream sint;
 public:
 	using char_type = typename base_type::char_type;
 	using category = typename base_type::category;
@@ -125,7 +124,7 @@ private:
 		if (src.empty()) {
 			return;
 		}
-
+		vectorstream sint;
 		sint.reserve(src.size()*3/2);
 		printJSON(src, sint, pretty);
 		sint.swap_vector(dest);
@@ -137,16 +136,12 @@ BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
 using json_filter = basic_json_filter<char>;
 using wjson_filter = basic_json_filter<wchar_t>;
 
-template <typename Ch, typename Alloc>
-vectorstream basic_json_filter<Ch, Alloc>::sint;
-
 // Sorcery! JSON stitch filter for boost::filtering_ostream
 template<typename Ch, typename Alloc = std::allocator<Ch>>
 class basic_json_stitch_filter : public aggregate_filter<Ch, Alloc> {
 private:
 	using base_type = aggregate_filter<Ch, Alloc>;
 	using vector_type = typename base_type::vector_type;
-	static vectorstream sint;
 
 public:
 	using char_type = typename base_type::char_type;
@@ -157,112 +152,118 @@ public:
 	}
 
 private:
+	decltype(auto) printValueRaw(vectorstream& sint, jsont::Tokenizer& reader) {
+		return sint << reader.dataValue();
+	}
+
+	decltype(auto) printValueQuoted(vectorstream& sint, jsont::Tokenizer& reader) {
+		return sint << '"' << reader.dataValue() << '"';
+	}
+
+	decltype(auto) printValueObject(vectorstream& sint, jsont::Tokenizer& reader) {
+		return printValueQuoted(sint, reader) << ':';
+	}
+
+	auto doPrintComma(vectorstream& sint, jsont::Token tok, size_t indent) {
+		if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd && tok != jsont::End) {
+			sint << ',';
+		}
+	}
+
+	void handleStitch(vectorstream& sint, jsont::Tokenizer& reader, size_t indent) {
+		sint << R"("stitches":)"sv;
+		jsont::Token tok = reader.next();
+		assert(tok == jsont::ObjectStart);
+		printValueRaw(sint, reader);
+		indent++;
+		tok = reader.next();
+		while (tok != jsont::ObjectEnd) {
+			assert(tok == jsont::FieldName);
+			if (reader.dataValue() == "filename"sv) {
+				// TODO: instead of being discarded, this should be used with output directoty to open stitch source file
+				tok = reader.next();	// Fetch filename...
+				assert(tok == jsont::String);
+				tok = reader.next();	// ... and discard it
+			} else if (reader.dataValue() == "ranges"sv) {
+				// The meat.
+				tok = reader.next();
+				assert(tok == jsont::ObjectStart);
+				tok = reader.next();
+				while (tok != jsont::ObjectEnd) {
+					assert(tok == jsont::FieldName);
+					printValueObject(sint, reader);
+					tok = reader.next();
+					assert(tok == jsont::String);
+					string_view slice = reader.dataValue();
+					ibufferstream sptr(slice.data(), slice.length());
+					unsigned offset;
+					unsigned length;
+					sptr >> offset >> length;
+					string_view stitch(inkContent.substr(offset, length));
+
+					if (stitch[0] == '[') {
+						sint << R"({"content":)"sv << stitch  << '}';
+					} else {
+						sint << stitch;
+					}
+					tok = reader.next();
+					doPrintComma(sint, tok, indent);
+				}
+				assert(tok == jsont::ObjectEnd);
+				tok = reader.next();
+			}
+		}
+		--indent;
+		assert(tok == jsont::ObjectEnd);
+		printValueRaw(sint, reader);
+	}
+
 	void do_filter(vector_type const& src, vector_type& dest) final {
 		if (src.empty()) {
 			return;
 		}
 
+		vectorstream sint;
 		sint.reserve(src.size()*3/2);
 		jsont::Tokenizer reader(src.data(), src.size());
 		size_t indent = 0;
 		jsont::Token tok = reader.current();
-		while (tok != jsont::End) {
+		while (true) {
 			switch (tok) {
+			case jsont::End:
+				sint.swap_vector(dest);
+				return;
 			case jsont::ObjectStart:
-				sint << '{';
+			case jsont::ArrayStart: {
+				printValueRaw(sint, reader);
+				auto const next = static_cast<jsont::Token>(static_cast<uint8_t>(tok) + uint8_t(1));
 				tok = reader.next();
-				if (tok == jsont::ObjectEnd) {
-					sint << '}';
+				if (tok == next) {
+					printValueRaw(sint, reader);
 					break;
-				} else {
-					indent++;
-					continue;
 				}
+				indent++;
+				continue;
+			}
 			case jsont::ObjectEnd:
-				--indent;
-				sint << '}';
-				break;
-			case jsont::ArrayStart:
-				sint << '[';
-				tok = reader.next();
-				if (tok == jsont::ArrayEnd) {
-					sint << ']';
-					break;
-				} else {
-					indent++;
-					continue;
-				}
 			case jsont::ArrayEnd:
 				--indent;
-				sint << ']';
-				break;
+				[[fallthrough]];
 			case jsont::True:
-				sint << "true"sv;
-				break;
 			case jsont::False:
-				sint << "false"sv;
-				break;
 			case jsont::Null:
-				sint << "null"sv;
-				break;
 			case jsont::Integer:
-				sint << reader.dataValue();
-				break;
 			case jsont::Float:
-				sint << reader.dataValue();
+				printValueRaw(sint, reader);
 				break;
 			case jsont::String:
-				sint << '"' << reader.dataValue() << '"';
+				printValueQuoted(sint, reader);
 				break;
 			case jsont::FieldName:
 				if (reader.dataValue() == "indexed-content"sv) {
-					sint << "\"stitches\":"sv;
-					tok = reader.next();
-					assert(tok == jsont::ObjectStart);
-					sint << '{';
-					indent++;
-					tok = reader.next();
-					while (tok != jsont::ObjectEnd) {
-						assert(tok == jsont::FieldName);
-						if (reader.dataValue() == "filename"sv) {
-							// TODO: instead of being discarded, this should be used with output directoty to open stitch source file
-							tok = reader.next();	// Fetch filename...
-							assert(tok == jsont::String);
-							tok = reader.next();	// ... and discard it
-						} else if (reader.dataValue() == "ranges"sv) {
-							// The meat.
-							tok = reader.next();
-							assert(tok == jsont::ObjectStart);
-							tok = reader.next();
-							while (tok != jsont::ObjectEnd) {
-								assert(tok == jsont::FieldName);
-								sint << '"' << reader.dataValue() << "\":"sv;
-								tok = reader.next();
-								assert(tok == jsont::String);
-								string_view slice = reader.dataValue();
-								ibufferstream sptr(slice.data(), slice.length());
-								unsigned offset;
-								unsigned length;
-								sptr >> offset >> length;
-								string_view stitch(inkContent.substr(offset, length));
-
-								if (stitch[0] == '[') {
-									sint << "{\"content\":"sv << stitch  << '}';
-								} else {
-									sint << stitch;
-								}
-								tok = reader.next();
-								if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd && tok != jsont::End) {
-									sint << ',';
-								}
-							}
-							tok = reader.next();
-						}
-					}
-					--indent;
-					sint << '}';
+					handleStitch(sint, reader, indent);
 				} else {
-					sint << '"' << reader.dataValue() << '"' << ':';
+					printValueObject(sint, reader);
 				}
 				tok = reader.next();
 				continue;
@@ -270,15 +271,12 @@ private:
 				cerr << reader.errorMessage() << endl;
 				break;
 			case jsont::_Comma:
-			case jsont::End:
 				break;
 			}
 			tok = reader.next();
-			if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd && tok != jsont::End) {
-				sint << ',';
-			}
+			doPrintComma(sint, tok, indent);
 		}
-		sint.swap_vector(dest);
+		__builtin_unreachable();
 	}
 	string_view const &inkContent;
 };
@@ -286,9 +284,6 @@ BOOST_IOSTREAMS_PIPABLE(basic_json_stitch_filter, 2)
 
 using json_stitch_filter = basic_json_stitch_filter<char>;
 using wjson_stitch_filter = basic_json_stitch_filter<wchar_t>;
-
-template <typename Ch, typename Alloc>
-vectorstream basic_json_stitch_filter<Ch, Alloc>::sint;
 
 enum ErrorCodes {
 	eOK,
@@ -313,7 +308,8 @@ int main(int argc, char *argv[]) {
 		if (!exists(obbfile)) {
 			cerr << "File "sv << obbfile << " does not exist!"sv << endl << endl;
 			return eOBB_NOT_FOUND;
-		} else if (!is_regular_file(obbfile)) {
+		}
+		if (!is_regular_file(obbfile)) {
 			cerr << "Path "sv << obbfile << " must be a file!"sv << endl << endl;
 			return eOBB_NOT_FILE;
 		}
