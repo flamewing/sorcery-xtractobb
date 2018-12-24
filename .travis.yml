@@ -1,9 +1,13 @@
 os: linux
-dist: trusty
+dist: xenial
 sudo: required
 
 language: cpp
 compiler: gcc
+
+cache:
+    directories:
+        - ${TRAVIS_BUILLD_DIR}/deps
 
 env:
   global:
@@ -13,12 +17,12 @@ env:
 
 before_install:
   # Exit immediately if the branch is the "coverity_scan" branch and the job number is not 1
-  - test "$TRAVIS_BRANCH" != "coverity_scan" -o "${TRAVIS_JOB_NUMBER##*.}" = "1" || exit 0
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get -qq update; fi
-  - if [ "$TRAVIS_BRANCH" = "coverity_scan" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca- ; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get -qq update; fi
+  - if [ "$TRAVIS_BRANCH" == "coverity_scan" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca- ; fi
 
 before_script:
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 90
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 1000
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/gcc-7 1000
 
 addons:
   apt:
@@ -32,10 +36,10 @@ addons:
       name: "flamewing/sorcery-xtractobb"
       description: "Tool to extract Inkle's Sorcery! OBB files"
     notification_email: flamewing.sonic@gmail.com
-    build_command:   "./build.sh"
+    build_command: "./build.sh"
     branch_pattern: coverity_scan
 
-script: if [ "$TRAVIS_BRANCH" != "coverity_scan" ]; then .travis/script.sh; fi
+script: if [ "$TRAVIS_BRANCH" != "coverity_scan" ]; then .travis/script.sh; elif [ -e cov-int/scm_log.txt ] ; then cat cov-int/scm_log.txt; fi
 
 notifications:
   email: true
