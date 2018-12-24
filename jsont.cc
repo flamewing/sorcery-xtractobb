@@ -63,7 +63,7 @@ namespace jsont {
 
 	string_view Tokenizer::dataValue() const noexcept {
 		if (!hasValue()) {
-			return string_view();
+			return translateToken(_token);
 		}
 		return _value;
 	}

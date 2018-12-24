@@ -12,10 +12,11 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace jsont {
 	// Tokens
-	enum Token {
+	enum Token : uint8_t {
 		End = 0,       // Input ended
 		ObjectStart,   // {
 		ObjectEnd,     // }
@@ -94,13 +95,20 @@ namespace jsont {
 		// Total number of input bytes
 		size_t inputSize() const noexcept;
 
+		// String representing token
+		std::string_view translateToken(Token tok) const noexcept {
+			return _convert.find(tok)->second;
+		}
+
 	private:
 		const Token& readAtom(std::string_view atom, const Token& token) noexcept;
 		size_t availableInput() const noexcept;
 		bool endOfInput() const noexcept;
 		const Token& setToken(Token t) noexcept;
 		const Token& setError(ErrorCode error) noexcept;
+		void initConverter() noexcept;
 
+		std::unordered_map<Token, std::string> _convert;
 		std::string_view _input;
 		std::string_view _value;
 		size_t _offset;
@@ -112,11 +120,13 @@ namespace jsont {
 
 	inline Tokenizer::Tokenizer(const char* bytes, size_t length) noexcept
 	: _offset(0), _token(End), _error(UnspecifiedError) {
+		initConverter();
 		reset(bytes, length);
 	}
 
 	inline Tokenizer::Tokenizer(std::string_view slice) noexcept
 	: _offset(0), _token(End), _error(UnspecifiedError) {
+		initConverter();
 		reset(slice);
 	}
 
@@ -163,6 +173,26 @@ namespace jsont {
 	inline const Token& Tokenizer::setError(Tokenizer::ErrorCode error) noexcept {
 		_error = error;
 		return _token = Error;
+	}
+
+	inline void Tokenizer::initConverter() noexcept {
+		using namespace std::literals::string_literals;
+		_convert = {
+			{End, "<<EOF>>"s},
+			{ObjectStart, "{"s},
+			{ObjectEnd, "}"s},
+			{ArrayStart, "["s},
+			{ArrayEnd, "]"s},
+			{True, "true"s},
+			{False, "false"s},
+			{Null, "null"s},
+			{Integer, "<<int>>"s},
+			{Float, "<<float>>"s},
+			{String, "<<string>>"s},
+			{FieldName, "<<field name>>"s},
+			{Error, "<<error>>"s},
+			{_Comma, ","s}
+		};
 	}
 
 	inline Tokenizer::ErrorCode Tokenizer::error() const noexcept {
