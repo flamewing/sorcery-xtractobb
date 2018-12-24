@@ -169,20 +169,15 @@ private:
         return printValueQuoted(sint, reader) << ':';
     }
 
-    auto doPrintComma(vectorstream& sint, jsont::Token tok, size_t indent) {
-        if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd &&
-            tok != jsont::End) {
-            sint << ',';
+    void handleObjectOrStitch(vectorstream& sint, jsont::Tokenizer& reader) {
+        if (reader.dataValue() != "indexed-content"sv) {
+            printValueObject(sint, reader);
+            return;
         }
-    }
-
-    void
-    handleStitch(vectorstream& sint, jsont::Tokenizer& reader, size_t indent) {
         sint << R"("stitches":)"sv;
         jsont::Token tok = reader.next();
         assert(tok == jsont::ObjectStart);
         printValueRaw(sint, reader);
-        indent++;
         tok = reader.next();
         while (tok != jsont::ObjectEnd) {
             assert(tok == jsont::FieldName);
@@ -192,6 +187,8 @@ private:
                 tok = reader.next(); // Fetch filename...
                 assert(tok == jsont::String);
                 tok = reader.next(); // ... and discard it
+                assert(tok == jsont::Comma);
+                tok = reader.next(); // Discard comma after it as well
             } else if (reader.dataValue() == "ranges"sv) {
                 // The meat.
                 tok = reader.next();
@@ -215,13 +212,15 @@ private:
                         sint << stitch;
                     }
                     tok = reader.next();
-                    doPrintComma(sint, tok, indent);
+                    if (tok == jsont::Comma) {
+                        printValueRaw(sint, reader);
+                        tok = reader.next();
+                    }
                 }
                 assert(tok == jsont::ObjectEnd);
                 tok = reader.next();
             }
         }
-        --indent;
         assert(tok == jsont::ObjectEnd);
         printValueRaw(sint, reader);
     }
@@ -234,10 +233,12 @@ private:
         vectorstream sint;
         sint.reserve(src.size() * 3 / 2);
         jsont::Tokenizer reader(src.data(), src.size());
-        size_t           indent = 0;
-        jsont::Token     tok    = reader.current();
+        jsont::Token     tok = reader.current();
         while (true) {
             switch (tok) {
+            case jsont::Error:
+                cerr << reader.errorMessage() << endl;
+                [[fallthrough]];
             case jsont::End:
                 sint.swap_vector(dest);
                 return;
@@ -251,39 +252,28 @@ private:
                     printValueRaw(sint, reader);
                     break;
                 }
-                indent++;
                 continue;
             }
             case jsont::ObjectEnd:
             case jsont::ArrayEnd:
-                --indent;
                 [[fallthrough]];
             case jsont::True:
             case jsont::False:
             case jsont::Null:
             case jsont::Integer:
             case jsont::Float:
+            case jsont::Comma:
                 printValueRaw(sint, reader);
                 break;
             case jsont::String:
                 printValueQuoted(sint, reader);
                 break;
             case jsont::FieldName:
-                if (reader.dataValue() == "indexed-content"sv) {
-                    handleStitch(sint, reader, indent);
-                } else {
-                    printValueObject(sint, reader);
-                }
+                handleObjectOrStitch(sint, reader);
                 tok = reader.next();
                 continue;
-            case jsont::Error:
-                cerr << reader.errorMessage() << endl;
-                break;
-            case jsont::_Comma:
-                break;
             }
             tok = reader.next();
-            doPrintComma(sint, tok, indent);
         }
         __builtin_unreachable();
     }

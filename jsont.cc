@@ -118,7 +118,7 @@ namespace jsont {
             case '{':
                 return setToken(ObjectStart);
             case '}': {
-                if (_token == _Comma) {
+                if (_token == Comma) {
                     return setError(UnexpectedTrailingComma);
                 }
                 return setToken(ObjectEnd);
@@ -127,7 +127,7 @@ namespace jsont {
             case '[':
                 return setToken(ArrayStart);
             case ']': {
-                if (_token == _Comma) {
+                if (_token == Comma) {
                     return setError(UnexpectedTrailingComma);
                 }
                 return setToken(ArrayEnd);
@@ -192,7 +192,6 @@ namespace jsont {
                     case ':':
                         return setToken(FieldName);
                     case ',':
-                        return setToken(jsont::String);
                     case ']':
                     case '}': {
                         --_offset; // rewind
@@ -211,11 +210,10 @@ namespace jsont {
 
             case ',': {
                 if (_token == ObjectStart || _token == ArrayStart ||
-                    _token == _Comma) {
+                    _token == Comma) {
                     return setError(UnexpectedComma);
                 }
-                _token = _Comma;
-                break;
+                return setToken(Comma);
             }
 
             default: {

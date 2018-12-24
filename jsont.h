@@ -30,7 +30,7 @@ namespace jsont {
         String,      // string value
         FieldName,   // field name
         Error,       // An error occured (see `error()` for details)
-        _Comma
+        Comma
     };
 
     // Reads a sequence of bytes and produces tokens and values while doing so
@@ -184,7 +184,7 @@ namespace jsont {
                     {False, "false"s},       {Null, "null"s},
                     {Integer, "<<int>>"s},   {Float, "<<float>>"s},
                     {String, "<<string>>"s}, {FieldName, "<<field name>>"s},
-                    {Error, "<<error>>"s},   {_Comma, ","s}};
+                    {Error, "<<error>>"s},   {Comma, ","s}};
     }
 
     inline Tokenizer::ErrorCode Tokenizer::error() const noexcept {

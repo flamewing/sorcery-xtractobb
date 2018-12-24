@@ -55,13 +55,16 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
         }
         return sint;
     };
-    auto lineBreak = [&sint, pretty]() {
-        if (pretty == ePRETTY) {
+    auto lineBreak = [&sint, &tok, pretty]() {
+        if (tok != jsont::Comma && pretty == ePRETTY) {
             sint << '\n';
         }
     };
     while (true) {
         switch (tok) {
+        case jsont::Error:
+            std::cerr << reader.errorMessage() << std::endl;
+            [[fallthrough]];
         case jsont::End:
             return;
         case jsont::ObjectStart:
@@ -96,17 +99,11 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
             printIndentedValue(printValueObject, true);
             tok = reader.next();
             continue;
-        case jsont::Error:
-            std::cerr << reader.errorMessage() << std::endl;
-            break;
-        case jsont::_Comma:
+        case jsont::Comma:
+            sint << ',';
             break;
         }
         tok = reader.next();
-        if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd &&
-            tok != jsont::End) {
-            sint << ',';
-        }
         lineBreak();
     }
     __builtin_unreachable();
