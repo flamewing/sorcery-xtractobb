@@ -17,101 +17,99 @@
 #ifndef PRETTY_JSON_H
 #define PRETTY_JSON_H
 
-enum PrettyJSON {
-	eNO_WHITESPACE = -1,
-	ePRETTY = 0,
-	eCOMPACT = 1
-};
+enum PrettyJSON { eNO_WHITESPACE = -1, ePRETTY = 0, eCOMPACT = 1 };
 
 #include "jsont.h"
 
 #include <iostream>
 
 #ifndef INDENT_CHAR
-#define INDENT_CHAR '\t'
+#    define INDENT_CHAR '\t'
 #endif
 
 template <typename Src, typename Dst>
 void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
-	jsont::Tokenizer reader(data.data(), data.size());
-	size_t indent = 0;
-	bool needValue = false;
-	jsont::Token tok = reader.current();
-	auto printIndentedValue =
-		[&needValue, &sint, &indent, pretty]
-		(auto valuePrinter, bool newNeedValue){
-			if (pretty == ePRETTY && (newNeedValue || !needValue)) {
-				sint << std::string(indent, INDENT_CHAR);
-			}
-			needValue = newNeedValue;
-			valuePrinter();
-		};
-	auto printValueRaw = [&sint, &reader]() -> decltype(auto) {
-			return sint << reader.dataValue();
-		};
-	auto printValueQuoted = [&sint, &reader]() -> decltype(auto) {
-			return sint << '"' << reader.dataValue() << '"';
-		};
-	auto printValueObject = [&sint, &printValueQuoted, pretty]() -> decltype(auto) {
-			printValueQuoted() << ':';
-			if (pretty != eNO_WHITESPACE) {
-				sint << ' ';
-			}
-			return sint;
-		};
-	auto lineBreak = [&sint, pretty]() {
-			if (pretty == ePRETTY) {
-				sint << '\n';
-			}
-		};
-	while (true) {
-		switch (tok) {
-		case jsont::End:
-			return;
-		case jsont::ObjectStart:
-		case jsont::ArrayStart: {
-			printIndentedValue(printValueRaw, false);
-			auto const next = static_cast<jsont::Token>(static_cast<uint8_t>(tok) + uint8_t(1));
-			tok = reader.next();
-			if (tok == next) {
-				sint << reader.dataValue();
-				break;
-			}
-			indent++;
-			lineBreak();
-			continue;
-		}
-		case jsont::ObjectEnd:
-		case jsont::ArrayEnd:
-			--indent;
-			[[fallthrough]];
-		case jsont::True:
-		case jsont::False:
-		case jsont::Null:
-		case jsont::Integer:
-		case jsont::Float:
-			printIndentedValue(printValueRaw, false);
-			break;
-		case jsont::String:
-			printIndentedValue(printValueQuoted, false);
-			break;
-		case jsont::FieldName:
-			printIndentedValue(printValueObject, true);
-			tok = reader.next();
-			continue;
-		case jsont::Error:
-			std::cerr << reader.errorMessage() << std::endl;
-			break;
-		case jsont::_Comma:
-			break;
-		}
-		tok = reader.next();
-		if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd && tok != jsont::End) {
-			sint << ',';
-		}
-		lineBreak();
-	}
-	__builtin_unreachable();
+    jsont::Tokenizer reader(data.data(), data.size());
+    size_t           indent             = 0;
+    bool             needValue          = false;
+    jsont::Token     tok                = reader.current();
+    auto             printIndentedValue = [&needValue, &sint, &indent,
+                               pretty](auto valuePrinter, bool newNeedValue) {
+        if (pretty == ePRETTY && (newNeedValue || !needValue)) {
+            sint << std::string(indent, INDENT_CHAR);
+        }
+        needValue = newNeedValue;
+        valuePrinter();
+    };
+    auto printValueRaw = [&sint, &reader]() -> decltype(auto) {
+        return sint << reader.dataValue();
+    };
+    auto printValueQuoted = [&sint, &reader]() -> decltype(auto) {
+        return sint << '"' << reader.dataValue() << '"';
+    };
+    auto printValueObject = [&sint, &printValueQuoted,
+                             pretty]() -> decltype(auto) {
+        printValueQuoted() << ':';
+        if (pretty != eNO_WHITESPACE) {
+            sint << ' ';
+        }
+        return sint;
+    };
+    auto lineBreak = [&sint, pretty]() {
+        if (pretty == ePRETTY) {
+            sint << '\n';
+        }
+    };
+    while (true) {
+        switch (tok) {
+        case jsont::End:
+            return;
+        case jsont::ObjectStart:
+        case jsont::ArrayStart: {
+            printIndentedValue(printValueRaw, false);
+            auto const next = static_cast<jsont::Token>(
+                static_cast<uint8_t>(tok) + uint8_t(1));
+            tok = reader.next();
+            if (tok == next) {
+                sint << reader.dataValue();
+                break;
+            }
+            indent++;
+            lineBreak();
+            continue;
+        }
+        case jsont::ObjectEnd:
+        case jsont::ArrayEnd:
+            --indent;
+            [[fallthrough]];
+        case jsont::True:
+        case jsont::False:
+        case jsont::Null:
+        case jsont::Integer:
+        case jsont::Float:
+            printIndentedValue(printValueRaw, false);
+            break;
+        case jsont::String:
+            printIndentedValue(printValueQuoted, false);
+            break;
+        case jsont::FieldName:
+            printIndentedValue(printValueObject, true);
+            tok = reader.next();
+            continue;
+        case jsont::Error:
+            std::cerr << reader.errorMessage() << std::endl;
+            break;
+        case jsont::_Comma:
+            break;
+        }
+        tok = reader.next();
+        if (indent > 0 && tok != jsont::ObjectEnd && tok != jsont::ArrayEnd &&
+            tok != jsont::End) {
+            sint << ',';
+        }
+        lineBreak();
+    }
+    __builtin_unreachable();
 }
 
 #endif // PRETTY_JSON_H
