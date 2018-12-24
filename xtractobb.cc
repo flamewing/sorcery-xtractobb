@@ -306,6 +306,104 @@ enum ErrorCodes {
     eOUTPUT_NO_ACCESS
 };
 
+string readObbFile(path const& obbfile) {
+    if (!exists(obbfile)) {
+        cerr << "File "sv << obbfile << " does not exist!"sv << endl << endl;
+        throw ErrorCodes{eOBB_NOT_FOUND};
+    }
+    if (!is_regular_file(obbfile)) {
+        cerr << "Path "sv << obbfile << " must be a file!"sv << endl << endl;
+        throw ErrorCodes{eOBB_NOT_FILE};
+    }
+
+    ifstream fin(obbfile, ios::in | ios::binary);
+    if (!fin.good()) {
+        cerr << "Could not open input file "sv << obbfile << "!"sv << endl
+             << endl;
+        throw ErrorCodes{eOBB_NO_ACCESS};
+    }
+
+    auto   len{file_size(obbfile)};
+    string obbcontents(len, '\0');
+    fin.read(&obbcontents[0], static_cast<std::streamsize>(len));
+    fin.close();
+
+    string_view const oggview(obbcontents);
+    if (oggview.substr(0, 8) != "AP_Pack!"sv) {
+        cerr << "Input file missing signature!"sv << endl << endl;
+        throw ErrorCodes{eOBB_INVALID};
+    }
+    return obbcontents;
+}
+
+void createOutputDir(path const& outdir) {
+    if (exists(outdir)) {
+        if (!is_directory(outdir)) {
+            cerr << "Path "sv << outdir << " must be a directory!"sv << endl
+                 << endl;
+            throw ErrorCodes{eOUTPUT_NOT_DIR};
+        }
+    } else {
+        create_directories(outdir);
+        if (!is_directory(outdir)) {
+            cerr << "Could not create output directory "sv << outdir << "!"sv
+                 << endl
+                 << endl;
+            throw ErrorCodes{eOUTPUT_NO_ACCESS};
+        }
+    }
+}
+
+void decodeFile(
+    zlib_decompressor& unzip, path outfile, string_view fdata,
+    string_view inkData, bool compressed, bool isReference) {
+    path const parentdir(outfile.parent_path());
+
+    if (!exists(parentdir) && !create_directories(parentdir)) {
+        cout << "\33[2K\r"sv << flush;
+        cerr << "Could not create directory "sv << parentdir << " for file "sv
+             << outfile << "!"sv << endl;
+        return;
+    }
+    if (outfile.extension() == ".minjson"s) {
+        outfile.replace_extension(".json"s);
+    }
+    ofstream fout(outfile, ios::out | ios::binary);
+    if (!fout.good()) {
+        cout << "\33[2K\r"sv << flush;
+        cerr << "Could not create file "sv << outfile << "!"sv << endl;
+        return;
+    }
+    if (isReference) {
+        cout << "\33[2K\rCreating reference file "sv << outfile << "... "sv
+             << flush;
+    }
+    filtering_ostream fsout;
+    if (compressed) {
+        fsout.push(unzip);
+    }
+    if (isReference) {
+        // TODO: Filter should receive OBB wrapper class and read
+        // inkcontent filename = indexed-content/filename
+        fsout.push(json_stitch_filter(inkData));
+    }
+    if (outfile.extension() == ".json"s ||
+        outfile.extension() == ".inkcontent"s) {
+        fsout.push(json_filter(ePRETTY));
+    }
+    fsout.push(fout);
+    fsout << fdata;
+    if (isReference) {
+        cout << "done."sv << flush;
+    }
+}
+
+string_view getData(string_view::const_iterator& it, string_view oggview) {
+    unsigned ptr = Read4(it);
+    unsigned len = Read4(it);
+    return oggview.substr(ptr, len);
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc != 3) {
@@ -315,57 +413,16 @@ int main(int argc, char* argv[]) {
         }
 
         path const obbfile(argv[1]);
-        if (!exists(obbfile)) {
-            cerr << "File "sv << obbfile << " does not exist!"sv << endl
-                 << endl;
-            return eOBB_NOT_FOUND;
-        }
-        if (!is_regular_file(obbfile)) {
-            cerr << "Path "sv << obbfile << " must be a file!"sv << endl
-                 << endl;
-            return eOBB_NOT_FILE;
-        }
+        string     obbcontents = readObbFile(obbfile);
 
         path const outdir(argv[2]);
-        if (exists(outdir)) {
-            if (!is_directory(outdir)) {
-                cerr << "Path "sv << outdir << " must be a directory!"sv << endl
-                     << endl;
-                return eOUTPUT_NOT_DIR;
-            }
-        } else {
-            create_directories(outdir);
-            if (!is_directory(outdir)) {
-                cerr << "Could not create output directory "sv << outdir
-                     << "!"sv << endl
-                     << endl;
-                return eOUTPUT_NO_ACCESS;
-            }
-        }
+        createOutputDir(outdir);
 
-        ifstream fin(obbfile, ios::in | ios::binary);
-        if (!fin.good()) {
-            cerr << "Could not open input file "sv << obbfile << "!"sv << endl
-                 << endl;
-            return eOBB_NO_ACCESS;
-        }
-
-        size_t const len = file_size(obbfile);
-        string       obbcontents;
-        obbcontents.resize(len);
-        fin.read(&obbcontents[0], static_cast<std::streamsize>(len));
-        fin.close();
-
-        string_view const oggview(obbcontents);
-        if (oggview.substr(0, 8) != "AP_Pack!"sv) {
-            cerr << "Input file missing signature!"sv << endl << endl;
-            return eOBB_INVALID;
-        }
-
+        string_view const           oggview(obbcontents);
         string_view::const_iterator it   = oggview.cbegin() + 8;
         unsigned const              hlen = Read4(it);
         unsigned const              htbl = Read4(it);
-        if (len != hlen) {
+        if (obbcontents.size() != hlen) {
             cerr << "Incorrect length in header!"sv << endl << endl;
             return eOBB_CORRUPT;
         }
@@ -386,12 +443,8 @@ int main(int argc, char* argv[]) {
 
         it = oggview.cbegin() + htbl;
         while (it != oggview.cend()) {
-            unsigned    fnameptr = Read4(it);
-            unsigned    fnamelen = Read4(it);
-            unsigned    fdataptr = Read4(it);
-            unsigned    fdatalen = Read4(it);
-            string_view fname(oggview.substr(fnameptr, fnamelen));
-            string_view fdata(oggview.substr(fdataptr, fdatalen));
+            string_view fname      = getData(it, oggview);
+            string_view fdata      = getData(it, oggview);
             bool const  compressed = fdata.size() != Read4(it);
 
             // TODO: These should be obtained by name from OBB wrapper when
@@ -408,35 +461,9 @@ int main(int argc, char* argv[]) {
             }
             cout << "\33[2K\rExtracting file "sv << fname << flush;
 
-            path       outfile(outdir / string(fname));
-            path const parentdir(outfile.parent_path());
-
-            if (!exists(parentdir) && !create_directories(parentdir)) {
-                cout << "\33[2K\r"sv << flush;
-                cerr << "Could not create directory "sv << parentdir
-                     << " for file "sv << outfile << "!"sv << endl;
-            } else {
-                if (outfile.extension() == ".minjson"s) {
-                    outfile.replace_extension(".json"s);
-                }
-                ofstream fout(outfile, ios::out | ios::binary);
-                if (!fout.good()) {
-                    cout << "\33[2K\r"sv << flush;
-                    cerr << "Could not create file "sv << outfile << "!"sv
-                         << endl;
-                } else {
-                    filtering_ostream fsout;
-                    if (compressed) {
-                        fsout.push(unzip);
-                    }
-                    if (outfile.extension() == ".json"s ||
-                        outfile.extension() == ".inkcontent"s) {
-                        fsout.push(json_filter(ePRETTY));
-                    }
-                    fsout.push(fout);
-                    fsout << fdata;
-                }
-            }
+            path outfile(outdir / string(fname));
+            decodeFile(
+                unzip, outfile, fdata, inkContentData, compressed, false);
         }
 
         if (!mainJsonData.empty() && !inkContentData.empty()) {
@@ -444,38 +471,15 @@ int main(int argc, char* argv[]) {
                 string(mainJsonName.substr(0, "SorceryN"sv.size())) +
                 "-Reference.json"s;
             path const outfile(outdir / fname);
-            path const parentdir(outfile.parent_path());
-
-            if (!exists(parentdir) && !create_directories(parentdir)) {
-                cout << "\33[2K\r"sv << flush;
-                cerr << "Could not create directory "sv << parentdir
-                     << " for file "sv << outfile << "!"sv << endl;
-            } else {
-                ofstream fout(outfile, ios::out | ios::binary);
-                if (!fout.good()) {
-                    cout << "\33[2K\r"sv << flush;
-                    cerr << "Could not create file "sv << outfile << "!"sv
-                         << endl;
-                } else {
-                    cout << "\33[2K\rCreating reference file "sv << outfile
-                         << "... "sv << flush;
-                    filtering_ostream fsout;
-                    if (mainJsonCompressed) {
-                        fsout.push(unzip);
-                    }
-                    // TODO: Filter should receive OBB wrapper class and read
-                    // inkcontent filename = indexed-content/filename
-                    fsout.push(json_stitch_filter(inkContentData));
-                    fsout.push(json_filter(ePRETTY));
-                    fsout.push(fout);
-                    fsout << mainJsonData;
-                    cout << "done."sv << flush;
-                }
-            }
+            decodeFile(
+                unzip, outfile, mainJsonData, inkContentData,
+                mainJsonCompressed, true);
         }
         cout << endl;
     } catch (std::exception const& except) {
         cerr << except.what() << endl;
+    } catch (ErrorCodes err) {
+        return err;
     }
     return eOK;
 }
