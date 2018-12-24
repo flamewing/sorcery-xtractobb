@@ -1,6 +1,6 @@
 #!/bin/bash
 # Delete everything
-rm -rf sorcery{1,2,3,4}{obb,json}
+rm -rf output/sorcery{1,2,3,4}{obb,json}
 
 # Extract Sorcery! 1 files
 ./xtractobb com.inkle.sorcery1/main.14002.com.inkle.sorcery1.obb output/sorcery1obb/
