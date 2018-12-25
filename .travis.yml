@@ -39,6 +39,7 @@ addons:
       name: "flamewing/sorcery-xtractobb"
       description: "Tool to extract Inkle's Sorcery! OBB files"
     notification_email: flamewing.sonic@gmail.com
+    build_command_prepend: "cov-configure --gcc"
     build_command: "make"
     branch_pattern: coverity_scan
 
