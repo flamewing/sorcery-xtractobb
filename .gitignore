@@ -13,3 +13,7 @@ pretty-print-json
 xtractobb
 *.pyc
 
+# Build
+*.o
+*.d
+
