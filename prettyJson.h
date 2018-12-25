@@ -35,7 +35,7 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
     bool             needValue          = false;
     jsont::Token     tok                = reader.current();
     auto             printIndentedValue = [&needValue, &sint, &indent,
-                               pretty](auto valuePrinter, bool newNeedValue) {
+                               &pretty](auto valuePrinter, bool newNeedValue) {
         if (pretty == ePRETTY && (newNeedValue || !needValue)) {
             sint << std::string(indent, INDENT_CHAR);
         }
@@ -49,14 +49,14 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
         return sint << '"' << reader.dataValue() << '"';
     };
     auto printValueObject = [&sint, &printValueQuoted,
-                             pretty]() -> decltype(auto) {
+                             &pretty]() -> decltype(auto) {
         printValueQuoted() << ':';
         if (pretty != eNO_WHITESPACE) {
             sint << ' ';
         }
         return sint;
     };
-    auto lineBreak = [&sint, &tok, pretty]() {
+    auto lineBreak = [&sint, &tok, &pretty]() {
         if (tok != jsont::Comma && pretty == ePRETTY) {
             sint << '\n';
         }

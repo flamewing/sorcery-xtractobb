@@ -153,7 +153,7 @@ public:
     using category  = typename base_type::category;
 
     // TODO: Filter should receive output directory instead.
-    explicit basic_json_stitch_filter(string_view const& _inkContent)
+    explicit basic_json_stitch_filter(string_view const _inkContent)
         : inkContent(_inkContent) {}
 
 private:
@@ -272,7 +272,7 @@ private:
         }
         __builtin_unreachable();
     }
-    string_view const& inkContent;
+    string_view const inkContent;
 };
 BOOST_IOSTREAMS_PIPABLE(basic_json_stitch_filter, 2)
 

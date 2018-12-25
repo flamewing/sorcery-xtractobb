@@ -39,6 +39,7 @@ namespace jsont {
         return setToken(token);
     }
 
+    __attribute__((pure))
     string_view Tokenizer::errorMessage() const noexcept {
         switch (_error) {
         case UnexpectedComma:

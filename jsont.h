@@ -17,7 +17,7 @@
 
 namespace jsont {
     // Tokens
-    enum Token : uint8_t {
+    enum Token : uint32_t {
         End = 0,     // Input ended
         ObjectStart, // {
         ObjectEnd,   // }
@@ -73,7 +73,7 @@ namespace jsont {
         bool boolValue() const noexcept;
 
         // Error codes
-        enum ErrorCode {
+        enum ErrorCode : uint32_t {
             UnspecifiedError = 0,
             UnexpectedComma,
             UnexpectedTrailingComma,
