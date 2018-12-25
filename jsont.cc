@@ -7,6 +7,12 @@
  *	All rights reserved. Use of this source code is governed by a
  *	MIT-style license that can be found in the copying.md file.
  */
+
+#ifdef __coverity_undefine___cpp_deduction_guides
+#    undef __cplusplus
+#    define __cplusplus 201703L
+#endif
+
 #include "jsont.h"
 
 using std::stod;

@@ -24,15 +24,15 @@ before_install:
   - if [ "$TRAVIS_BRANCH" == "coverity_scan" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca- ; fi
 
 before_script:
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 1000
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/gcc-8 1000
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 1000
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/gcc-7 1000
 
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - g++-8
+      - g++-7
       - libboost-all-dev
   coverity_scan:
     project:
