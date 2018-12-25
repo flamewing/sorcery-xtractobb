@@ -42,7 +42,10 @@ addons:
     build_command: "make"
     branch_pattern: coverity_scan
 
-script: if [ "$TRAVIS_BRANCH" != "coverity_scan" ]; then .travis/script.sh; elif [ -e cov-int/scm_log.txt ] ; then cat cov-int/scm_log.txt; fi
+script:
+  - if [ "$TRAVIS_BRANCH" != "coverity_scan" ]; then .travis/script.sh; fi
+  - if [ -e cov-int/scm_log.txt ] ; then cat cov-int/scm_log.txt; fi
+  - if [ -e cov-int/build-log.txt ] ; then cat cov-int/build-log.txt; fi
 
 notifications:
   email: true
