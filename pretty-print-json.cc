@@ -68,6 +68,8 @@ void usage(ostream& out, string_view const program) {
            "\t-c\tLike w, but adds a single space after ':'.\n\n";
 }
 
+extern "C" int main(int argc, char* argv[]);
+
 int main(int argc, char* argv[]) {
     string_view const program(argv[0]);
     if (argc < 3) {

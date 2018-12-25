@@ -15,6 +15,7 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <cstring>
 #include <iomanip>
@@ -92,11 +93,11 @@ inline size_t Read1(T& in) {
 
 template <typename T>
 inline uint32_t Read4(T& in) {
-    auto                               ptr{to_address(in)};
-    alignas(alignof(uint32_t)) uint8_t buf[sizeof(uint32_t)];
-    uint32_t                           val;
-    std::memcpy(&buf[0], ptr, sizeof(uint32_t));
-    std::memcpy(&val, &buf[0], sizeof(uint32_t));
+    auto ptr{to_address(in)};
+    alignas(alignof(uint32_t)) std::array<uint8_t, sizeof(uint32_t)> buf{};
+    uint32_t                                                         val;
+    std::memcpy(buf.data(), ptr, sizeof(uint32_t));
+    std::memcpy(&val, buf.data(), sizeof(uint32_t));
     std::advance(in, sizeof(uint32_t));
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     return val;
@@ -393,6 +394,8 @@ string_view getData(string_view::const_iterator& it, string_view oggview) {
     unsigned len = Read4(it);
     return oggview.substr(ptr, len);
 }
+
+extern "C" int main(int argc, char* argv[]);
 
 int main(int argc, char* argv[]) {
     try {
