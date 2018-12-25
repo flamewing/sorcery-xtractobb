@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+if [ -z "${CXX}" ]; then
+	CXX="g++"
+fi
+
 CXXFLAGS="-std=c++17 -Wall -Wextra -pedantic -Wcast-qual -Wwrite-strings -Wredundant-decls -Wdisabled-optimization -fcheck-new -Wctor-dtor-privacy -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wuseless-cast -Wno-long-long"
 DEBUG_FLAGS=
 LIBS="-lboost_system -lboost_filesystem -lboost_iostreams"
@@ -11,8 +15,14 @@ elif [[ "$1" == "gprof" ]]; then
 else
 	DEBUG_FLAGS="-O3 -s"
 fi
-echo $DEBUG_FLAGS
-rm -f ./*~
-g++ $CXXFLAGS $DEBUG_FLAGS -o xtractobb xtractobb.cc jsont.cc $LIBS
-g++ $CXXFLAGS $DEBUG_FLAGS -o pretty-print-json pretty-print-json.cc jsont.cc $LIBS
 
+#echo $DEBUG_FLAGS
+rm -f ./*~
+
+print_and_run() {
+	echo "$1"
+	eval "$1"
+}
+
+print_and_run "${CXX} ${CXXFLAGS} ${DEBUG_FLAGS} -o xtractobb xtractobb.cc jsont.cc $LIBS"
+print_and_run "${CXX} ${CXXFLAGS} ${DEBUG_FLAGS} -o pretty-print-json pretty-print-json.cc jsont.cc $LIBS"
