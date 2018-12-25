@@ -101,6 +101,122 @@ namespace jsont {
         return strtoll(_value.data(), nullptr, base10);
     }
 
+    inline void Tokenizer::skipWS() noexcept {
+        while (!endOfInput()) {
+            char b = _input[_offset++];
+            switch (b) {
+            case ' ':
+            case '\t':
+            case '\r':
+            case '\n':
+                // IETF RFC4627
+                // ignore whitespace
+                break;
+            default:
+                // Put character back and return
+                --_offset;
+                return;
+            }
+        }
+    }
+
+    inline Token Tokenizer::readNumber(char b, size_t token_start) noexcept {
+        if (safe_isdigit(b) || b == '+' || b == '-') {
+            // We are reading a number
+            Token token = jsont::Integer;
+
+            while (!endOfInput()) {
+                b = _input[_offset++];
+                switch (b) {
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    break;
+                case '.':
+                    token = jsont::Float;
+                    break;
+                case 'E':
+                case 'e':
+                case '-':
+                case '+':
+                    if (token != jsont::Float) {
+                        return setError(MalformedNumberLiteral);
+                    }
+                    break;
+                default:
+                    if (_offset - token_start == 1 &&
+                        (_input[token_start] == '-' ||
+                         _input[token_start] == '+')) {
+                        return setError(MalformedNumberLiteral);
+                    }
+
+                    // rewind the byte that terminated this number
+                    // literal
+                    --_offset;
+
+                    _value = _input.substr(token_start, _offset - token_start);
+                    return setToken(token);
+                }
+            }
+            return setToken(End);
+        }
+        return setError(InvalidByte);
+    }
+
+    Token Tokenizer::readString(char b) noexcept {
+        // Skip starting double quotes
+        size_t token_start = _offset;
+
+        while (!endOfInput()) {
+            b = _input[_offset++];
+
+            if (b == '\\') {
+                if (endOfInput()) {
+                    return setError(PrematureEndOfInput);
+                }
+                _offset++;
+            } else if (b == '"') {
+                break;
+            } else if (b == 0) {
+                return setError(InvalidByte);
+            }
+        }
+
+        if (b != '"') {
+            return setError(UnterminatedString);
+        }
+        // -1 to not include ending double quotes
+        _value = _input.substr(token_start, _offset - token_start - 1);
+
+        skipWS();
+        // is this a field name?
+        if (!endOfInput()) {
+            b = _input[_offset++];
+            switch (b) {
+            case ':':
+                return setToken(FieldName);
+            case ',':
+            case ']':
+            case '}':
+                --_offset; // rewind
+                return setToken(jsont::String);
+            case 0:
+                return setError(InvalidByte);
+            default:
+                // Expected a comma or a colon
+                return setError(SyntaxError);
+            }
+        }
+        return setToken(jsont::String);
+    }
+
     Token Tokenizer::next() noexcept {
         //
         // { } [ ] n t f "
@@ -110,163 +226,36 @@ namespace jsont {
         //         | +- r u e
         //         +- u l l
         //
+        skipWS();
         while (!endOfInput()) {
             size_t token_start = _offset;
             char   b           = _input[_offset++];
             switch (b) {
             case '{':
                 return setToken(ObjectStart);
-            case '}': {
-                if (_token == Comma) {
-                    return setError(UnexpectedTrailingComma);
-                }
-                return setToken(ObjectEnd);
-            }
-
+            case '}':
+                return readEndBracket(ObjectEnd);
             case '[':
                 return setToken(ArrayStart);
-            case ']': {
-                if (_token == Comma) {
-                    return setError(UnexpectedTrailingComma);
-                }
-                return setToken(ArrayEnd);
-            }
-
+            case ']':
+                return readEndBracket(ArrayEnd);
             case 'n':
                 return readAtom("ull"sv, jsont::Null);
             case 't':
                 return readAtom("rue"sv, jsont::True);
             case 'f':
                 return readAtom("alse"sv, jsont::False);
-
-            case ' ':
-            case '\t':
-            case '\r':
-            case '\n':
-                // IETF RFC4627
-                // ignore whitespace and let the outer "while" do its thing
-                break;
-
             case 0:
                 return setError(InvalidByte);
-
-                // when we read a value, we don't produce a token until we
-                // either reach end of input, a colon (then the value is a field
-                // name), a comma, or an array or object terminator.
-
-            case '"': {
-                // Skip starting double quotes
-                token_start = _offset;
-
-                while (!endOfInput()) {
-                    b = _input[_offset++];
-
-                    if (b == '\\') {
-                        if (endOfInput()) {
-                            return setError(PrematureEndOfInput);
-                        }
-                        _offset++;
-                    } else if (b == '"') {
-                        break;
-                    } else if (b == 0) {
-                        return setError(InvalidByte);
-                    }
-                }
-
-                if (b != '"') {
-                    return setError(UnterminatedString);
-                }
-                // -1 to not include ending double quotes
-                _value = _input.substr(token_start, _offset - token_start - 1);
-
-                // is this a field name?
-                while (!endOfInput()) {
-                    b = _input[_offset++];
-                    switch (b) {
-                    case ' ':
-                    case '\t':
-                    case '\r':
-                    case '\n':
-                        break;
-                    case ':':
-                        return setToken(FieldName);
-                    case ',':
-                    case ']':
-                    case '}': {
-                        --_offset; // rewind
-                        return setToken(jsont::String);
-                    }
-                    case 0:
-                        return setError(InvalidByte);
-                    default: {
-                        // Expected a comma or a colon
-                        return setError(SyntaxError);
-                    }
-                    }
-                }
-                return setToken(jsont::String);
-            }
-
-            case ',': {
-                if (_token == ObjectStart || _token == ArrayStart ||
-                    _token == Comma) {
-                    return setError(UnexpectedComma);
-                }
-                return setToken(Comma);
-            }
-
-            default: {
-                if (safe_isdigit(b) || b == '+' || b == '-') {
-                    // We are reading a number
-                    Token token = jsont::Integer;
-
-                    while (!endOfInput()) {
-                        b = _input[_offset++];
-                        switch (b) {
-                        case '0':
-                        case '1':
-                        case '2':
-                        case '3':
-                        case '4':
-                        case '5':
-                        case '6':
-                        case '7':
-                        case '8':
-                        case '9':
-                            break;
-                        case '.':
-                            token = jsont::Float;
-                            break;
-                        case 'E':
-                        case 'e':
-                        case '-':
-                        case '+': {
-                            if (token != jsont::Float) {
-                                return setError(MalformedNumberLiteral);
-                            }
-                            break;
-                        }
-                        default: {
-                            if (_offset - token_start == 1 &&
-                                (_input[token_start] == '-' ||
-                                 _input[token_start] == '+')) {
-                                return setError(MalformedNumberLiteral);
-                            }
-
-                            // rewind the byte that terminated this number
-                            // literal
-                            --_offset;
-
-                            _value = _input.substr(
-                                token_start, _offset - token_start);
-                            return setToken(token);
-                        }
-                        }
-                    }
-                    return setToken(End);
-                }
-                return setError(InvalidByte);
-            }
+            // when we read a value, we don't produce a token until we
+            // either reach end of input, a colon (then the value is a field
+            // name), a comma, or an array or object terminator.
+            case '"':
+                return readString(b);
+            case ',':
+                return readComma();
+            default:
+                return readNumber(b, token_start);
             }
         }
 

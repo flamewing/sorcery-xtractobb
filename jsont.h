@@ -100,6 +100,11 @@ namespace jsont {
 
     private:
         std::string_view translateToken(Token tok) const noexcept;
+        void             skipWS() noexcept;
+        Token            readNumber(char b, size_t token_start) noexcept;
+        Token            readString(char b) noexcept;
+        Token            readComma() noexcept;
+        Token            readEndBracket(Token token) noexcept;
         Token            readAtom(std::string_view atom, Token token) noexcept;
         size_t           availableInput() const noexcept;
         bool             endOfInput() const noexcept;
@@ -156,6 +161,20 @@ namespace jsont {
     inline std::string_view Tokenizer::translateToken(Token tok) const
         noexcept {
         return _convert.find(tok)->second;
+    }
+
+    inline Token Tokenizer::readComma() noexcept {
+        if (_token == ObjectStart || _token == ArrayStart || _token == Comma) {
+            return setError(UnexpectedComma);
+        }
+        return setToken(Comma);
+    }
+
+    inline Token Tokenizer::readEndBracket(Token token) noexcept {
+        if (_token == Comma) {
+            return setError(UnexpectedTrailingComma);
+        }
+        return setToken(token);
     }
 
     inline size_t Tokenizer::availableInput() const noexcept {
