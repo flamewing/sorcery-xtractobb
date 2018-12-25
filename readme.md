@@ -6,7 +6,7 @@ Inkle Sorcery! Extractor
 ========================
 This software is capable of extracting the Android OBB files used in the Inkle Sorcery! series. It is possible that other Inkle games can also be extracted with this tool, but I did not test it.
 
-To compile this tool you need a C++14-compatible compiler (GCC 5.4 is enough), as well as Boost. When you meet the requirements, run the "build.sh" script and the "xtractobb" executable will be created. Its usage is:
+To compile this tool you need a C++17-compatible compiler (GCC 7 is enough), as well as Boost. When you meet the requirements, run "make" and the "xtractobb" executable will be created. Its usage is:
 
     xtractobb <obbfile> <outputdir>
 
