@@ -246,15 +246,13 @@ private:
                 auto const next = static_cast<jsont::Token>(
                     static_cast<uint8_t>(tok) + uint8_t(1));
                 tok = reader.next();
-                if (tok == next) {
-                    printValueRaw(sint, reader);
-                    break;
+                if (tok != next) {
+                    continue;
                 }
-                continue;
+                [[fallthrough]];
             }
             case jsont::ObjectEnd:
             case jsont::ArrayEnd:
-                [[fallthrough]];
             case jsont::True:
             case jsont::False:
             case jsont::Null:
@@ -268,8 +266,7 @@ private:
                 break;
             case jsont::FieldName:
                 handleObjectOrStitch(sint, reader);
-                tok = reader.next();
-                continue;
+                break;
             }
             tok = reader.next();
         }
