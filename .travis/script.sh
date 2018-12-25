@@ -1,3 +1,3 @@
 #!/bin/sh
-./build.sh
+make
 

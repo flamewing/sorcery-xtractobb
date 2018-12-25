@@ -14,6 +14,7 @@ env:
     # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
     #   via the "travis encrypt" command using the project repo's public key
     - secure: "JtcUeUxYQoaxJnQPmOxJiPI1Af1E6m8THXhIqrDxKo979jtvi+7TBQORQHBR+QBJ1Ux4zbvt6xnfj2tQuxVB01E+1fX3F05ZuehVrZ85jI0yaDVKuqS0bKPWJvT4kVneEnjAM34OIEaFjy0LRWYsrnen64AhI5qK9SB8Q5nkg2ShAP9rLktkA6iljH2JUM6Rmq58r/hwULkm7QtrA+06AparaEukGlrxdjYmiQRAUgj72ZUmwKPv6naJNoLgJhrsLcju7gJ4ONsEFJNvql1SC/tCKAFuncqFr0Ek4fX1SoVkcOK5r5NNHdNUIEfabG1wg1TD+zF7SO7EhNvySDu9aSPMMKpyHTMVwMvJiraf50grmiZKb2o5OAMFQLL4ZQNrqShD9NKM8D5rDu+XP+9giYgTy9kBxm+LOSe1KMKIFW21Al8jFehbbaF7pGm4z8j19ichqOBVlNtKcMIHqtpWjPXolAhJn8XN6mDCFMkqXNdApefDj9ej2kqT7Cx4/A7pOc/i+EYqUqfVSSmUvTCoQqs4yQRvE2VffvPv+X19IM2JFog5X0Ams/2Jcr/wi9y5vXJI/JfA90JOqe5dtx0zqHhQ0rmYSkPnTzSCccUuMYV7BdZOIFoSdYp82a6FUCP6bSPXpcqS/J0gLlAw3MSY0sXHJFubGnNURCIvbukFpgE="
+    - MAKEFLAGS="-j 2"
     - CXX=g++
     - CC=gcc
 
@@ -38,7 +39,7 @@ addons:
       name: "flamewing/sorcery-xtractobb"
       description: "Tool to extract Inkle's Sorcery! OBB files"
     notification_email: flamewing.sonic@gmail.com
-    build_command: "./build.sh"
+    build_command: "make"
     branch_pattern: coverity_scan
 
 script: if [ "$TRAVIS_BRANCH" != "coverity_scan" ]; then .travis/script.sh; elif [ -e cov-int/scm_log.txt ] ; then cat cov-int/scm_log.txt; fi
