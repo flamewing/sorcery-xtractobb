@@ -227,10 +227,6 @@ private:
     }
 
     void do_filter(vector_type const& src, vector_type& dest) final {
-        if (src.empty()) {
-            return;
-        }
-
         vectorstream sint;
         sint.reserve(src.size() * 3 / 2);
         jsont::Tokenizer reader(src.data(), src.size());
