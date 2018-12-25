@@ -5,6 +5,9 @@ Sorcery*-password.txt
 Spellbook.jpg
 com.inkle.sorcery*
 sorcery*
+output/*
+reference/*
+
 # Executables
 pretty-print-json
 xtractobb
