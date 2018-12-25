@@ -15,11 +15,6 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef __coverity_undefine___cpp_deduction_guides
-#    undef __cplusplus
-#    define __cplusplus 201703L
-#endif
-
 #include <algorithm>
 #include <array>
 #include <cstdio>
