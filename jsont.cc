@@ -23,8 +23,7 @@ namespace jsont {
         return isdigit(static_cast<unsigned char>(c)) != 0;
     }
 
-    inline const Token&
-    Tokenizer::readAtom(string_view atom, const Token& token) noexcept {
+    inline Token Tokenizer::readAtom(string_view atom, Token token) noexcept {
         if (availableInput() < atom.length()) {
             return setError(Tokenizer::PrematureEndOfInput);
         }
@@ -102,7 +101,7 @@ namespace jsont {
         return strtoll(_value.data(), nullptr, base10);
     }
 
-    const Token& Tokenizer::next() noexcept {
+    Token Tokenizer::next() noexcept {
         //
         // { } [ ] n t f "
         //         | | | |

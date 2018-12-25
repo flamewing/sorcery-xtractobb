@@ -40,10 +40,10 @@ namespace jsont {
         explicit Tokenizer(std::string_view slice) noexcept;
 
         // Read next token
-        const Token& next() noexcept;
+        Token next() noexcept;
 
         // Access current token
-        const Token& current() const noexcept;
+        Token current() const noexcept;
 
         // Reset the tokenizer, making it possible to reuse this parser so to
         // avoid unnecessary memory allocation and deallocation.
@@ -98,19 +98,14 @@ namespace jsont {
         // Total number of input bytes
         size_t inputSize() const noexcept;
 
-        // String representing token
-        std::string_view translateToken(Token tok) const noexcept {
-            return _convert.find(tok)->second;
-        }
-
     private:
-        const Token&
-                     readAtom(std::string_view atom, const Token& token) noexcept;
-        size_t       availableInput() const noexcept;
-        bool         endOfInput() const noexcept;
-        const Token& setToken(Token t) noexcept;
-        const Token& setError(ErrorCode error) noexcept;
-        void         initConverter() noexcept;
+        std::string_view translateToken(Token tok) const noexcept;
+        Token            readAtom(std::string_view atom, Token token) noexcept;
+        size_t           availableInput() const noexcept;
+        bool             endOfInput() const noexcept;
+        Token            setToken(Token t) noexcept;
+        Token            setError(ErrorCode error) noexcept;
+        void             initConverter() noexcept;
 
         std::unordered_map<Token, std::string> _convert;
         std::string_view                       _input;
@@ -134,7 +129,7 @@ namespace jsont {
         reset(slice);
     }
 
-    inline const Token& Tokenizer::current() const noexcept { return _token; }
+    inline Token Tokenizer::current() const noexcept { return _token; }
 
     inline void Tokenizer::reset(const char* bytes, size_t length) noexcept {
         reset(std::string_view(bytes, length));
@@ -158,6 +153,11 @@ namespace jsont {
 
     inline bool Tokenizer::boolValue() const noexcept { return _token == True; }
 
+    inline std::string_view Tokenizer::translateToken(Token tok) const
+        noexcept {
+        return _convert.find(tok)->second;
+    }
+
     inline size_t Tokenizer::availableInput() const noexcept {
         return _input.length() - _offset;
     }
@@ -166,12 +166,9 @@ namespace jsont {
         return _offset == _input.length();
     }
 
-    inline const Token& Tokenizer::setToken(Token t) noexcept {
-        return _token = t;
-    }
+    inline Token Tokenizer::setToken(Token t) noexcept { return _token = t; }
 
-    inline const Token&
-    Tokenizer::setError(Tokenizer::ErrorCode error) noexcept {
+    inline Token Tokenizer::setError(Tokenizer::ErrorCode error) noexcept {
         _error        = error;
         return _token = Error;
     }
