@@ -25,11 +25,11 @@
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
 #ifndef __clang__
-#pragma GCC diagnostic ignored "-Wsuggest-attribute=malloc"
-#pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
-#pragma GCC diagnostic ignored "-Wsuggest-final-methods"
-#pragma GCC diagnostic ignored "-Wsuggest-final-types"
-#pragma GCC diagnostic ignored "-Wuseless-cast"
+#    pragma GCC diagnostic ignored "-Wsuggest-attribute=malloc"
+#    pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
+#    pragma GCC diagnostic ignored "-Wsuggest-final-methods"
+#    pragma GCC diagnostic ignored "-Wsuggest-final-types"
+#    pragma GCC diagnostic ignored "-Wuseless-cast"
 #endif
 #include "parser.hh"
 #pragma GCC diagnostic pop
@@ -41,7 +41,8 @@ int driver::parse(const std::string& f) {
     location.initialize(&file);
     scan_begin();
     yy::parser parse(*this);
-    parse.set_debug_level(static_cast<yy::parser::debug_level_type>(trace_parsing));
+    parse.set_debug_level(
+        static_cast<yy::parser::debug_level_type>(trace_parsing));
     int res = parse.parse();
     scan_end();
     return res;
