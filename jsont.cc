@@ -172,10 +172,7 @@ namespace jsont {
         return setError(InvalidByte);
     }
 
-    Token Tokenizer::readString(char b) noexcept {
-        // Skip starting double quotes
-        size_t token_start = _offset;
-
+    Token Tokenizer::readString(char b, size_t token_start) noexcept {
         while (!endOfInput()) {
             b = _input[_offset++];
 
@@ -194,8 +191,8 @@ namespace jsont {
         if (b != '"') {
             return setError(UnterminatedString);
         }
-        // -1 to not include ending double quotes
-        _value = _input.substr(token_start, _offset - token_start - 1);
+        // Note: double-quotes are included in the token value.
+        _value = _input.substr(token_start, _offset - token_start);
 
         skipWS();
         // is this a field name?
@@ -253,7 +250,7 @@ namespace jsont {
             // either reach end of input, a colon (then the value is a field
             // name), a comma, or an array or object terminator.
             case '"':
-                return readString(b);
+                return readString(b, token_start);
             case ',':
                 return readComma();
             default:

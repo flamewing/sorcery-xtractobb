@@ -103,7 +103,7 @@ namespace jsont {
         std::string_view translateToken(Token tok) const noexcept;
         void             skipWS() noexcept;
         Token            readNumber(char b, size_t token_start) noexcept;
-        Token            readString(char b) noexcept;
+        Token            readString(char b, size_t token_start) noexcept;
         Token            readComma() noexcept;
         Token            readEndBracket(Token token) noexcept;
         Token            readAtom(std::string_view atom, Token token) noexcept;

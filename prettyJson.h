@@ -45,12 +45,8 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
     auto printValueRaw = [&sint, &reader]() -> decltype(auto) {
         return sint << reader.dataValue();
     };
-    auto printValueQuoted = [&sint, &reader]() -> decltype(auto) {
-        return sint << '"' << reader.dataValue() << '"';
-    };
-    auto printValueObject = [&sint, &printValueQuoted,
-                             &pretty]() -> decltype(auto) {
-        printValueQuoted() << ':';
+    auto printValueObject = [&sint, &reader, &pretty]() -> decltype(auto) {
+        sint << reader.dataValue() << ':';
         if (pretty != eNO_WHITESPACE) {
             sint << ' ';
         }
@@ -91,10 +87,8 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
         case jsont::Null:
         case jsont::Integer:
         case jsont::Float:
-            printIndentedValue(printValueRaw, false);
-            break;
         case jsont::String:
-            printIndentedValue(printValueQuoted, false);
+            printIndentedValue(printValueRaw, false);
             break;
         case jsont::FieldName:
             printIndentedValue(printValueObject, true);

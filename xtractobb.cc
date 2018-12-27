@@ -162,17 +162,12 @@ private:
     }
 
     decltype(auto)
-    printValueQuoted(vectorstream& sint, jsont::Tokenizer& reader) {
-        return sint << '"' << reader.dataValue() << '"';
-    }
-
-    decltype(auto)
     printValueObject(vectorstream& sint, jsont::Tokenizer& reader) {
-        return printValueQuoted(sint, reader) << ':';
+        return sint << reader.dataValue() << ':';
     }
 
     void handleObjectOrStitch(vectorstream& sint, jsont::Tokenizer& reader) {
-        if (reader.dataValue() != "indexed-content"sv) {
+        if (reader.dataValue() != R"("indexed-content")"sv) {
             printValueObject(sint, reader);
             return;
         }
@@ -183,7 +178,7 @@ private:
         tok = reader.next();
         while (tok != jsont::ObjectEnd) {
             assert(tok == jsont::FieldName);
-            if (reader.dataValue() == "filename"sv) {
+            if (reader.dataValue() == R"("filename")"sv) {
                 // TODO: instead of being discarded, this should be used with
                 // output directoty to open stitch source file
                 tok = reader.next(); // Fetch filename...
@@ -191,7 +186,7 @@ private:
                 tok = reader.next(); // ... and discard it
                 assert(tok == jsont::Comma);
                 tok = reader.next(); // Discard comma after it as well
-            } else if (reader.dataValue() == "ranges"sv) {
+            } else if (reader.dataValue() == R"("ranges")"sv) {
                 // The meat.
                 tok = reader.next();
                 assert(tok == jsont::ObjectStart);
@@ -202,6 +197,8 @@ private:
                     tok = reader.next();
                     assert(tok == jsont::String);
                     string_view   slice = reader.dataValue();
+                    // Remove starting double-quotes
+                    slice.remove_prefix(1);
                     ibufferstream sptr(slice.data(), slice.length());
                     unsigned      offset;
                     unsigned      length;
@@ -259,10 +256,8 @@ private:
             case jsont::Integer:
             case jsont::Float:
             case jsont::Comma:
-                printValueRaw(sint, reader);
-                break;
             case jsont::String:
-                printValueQuoted(sint, reader);
+                printValueRaw(sint, reader);
                 break;
             case jsont::FieldName:
                 handleObjectOrStitch(sint, reader);
