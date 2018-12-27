@@ -8,7 +8,7 @@
  *	MIT-style license that can be found in the copying.md file.
  */
 
-#include "jsont.h"
+#include "jsont.hh"
 
 using std::stod;
 using std::stoll;

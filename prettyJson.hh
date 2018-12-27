@@ -20,7 +20,7 @@
 
 enum PrettyJSON { eNO_WHITESPACE = -1, ePRETTY = 0, eCOMPACT = 1 };
 
-#include "jsont.h"
+#include "jsont.hh"
 
 #include <iostream>
 

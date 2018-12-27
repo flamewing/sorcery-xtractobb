@@ -41,8 +41,8 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/stream.hpp>
 
-#include "jsont.h"
-#include "prettyJson.h"
+#include "jsont.hh"
+#include "prettyJson.hh"
 
 using std::allocator;
 using std::cerr;

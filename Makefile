@@ -10,7 +10,7 @@ CXX ?= g++
 EXTRACTOBB_SRCSC := xtractobb.cc jsont.cc 
 PRETTYJSON_SRCSC := pretty-print-json.cc jsont.cc
 SRCSC            := $(EXTRACTOBB_SRCSC) $(PRETTYJSON_SRCSC)
-SRCSH            := $(foreach SRCDIR,$(SRCDIRS),$(wildcard $(SRCDIR)/*.h))
+SRCSH            := $(foreach SRCDIR,$(SRCDIRS),$(wildcard $(SRCDIR)/*.hh))
 
 EXTRACTOBB_OBJECTS := $(EXTRACTOBB_SRCSC:%.cc=%.o)
 PRETTYJSON_OBJECTS := $(PRETTYJSON_SRCSC:%.cc=%.o)
