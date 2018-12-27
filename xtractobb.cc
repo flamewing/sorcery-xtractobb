@@ -25,24 +25,21 @@
 #include <memory>
 #include <regex>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-
+#include <boost/interprocess/streams/bufferstream.hpp>
+#include <boost/interprocess/streams/vectorstream.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/iostreams/filter/aggregate.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/stream.hpp>
-
-#include <boost/interprocess/streams/bufferstream.hpp>
-#include <boost/interprocess/streams/vectorstream.hpp>
-
-#include <string_view>
-using namespace std::literals::string_view_literals;
 
 #include "jsont.h"
 #include "prettyJson.h"
@@ -62,12 +59,14 @@ using std::string_view;
 using std::vector;
 
 using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
 
 using boost::filesystem::ifstream;
 using boost::filesystem::ofstream;
 using boost::filesystem::path;
 using boost::iostreams::aggregate_filter;
 using boost::iostreams::filtering_ostream;
+using boost::iostreams::mapped_file_source;
 using boost::iostreams::zlib_decompressor;
 namespace zlib = boost::iostreams::zlib;
 
@@ -93,7 +92,7 @@ inline size_t Read1(T& in) {
 }
 
 template <typename T>
-inline uint32_t Read4(T& in) {
+inline uint32_t Read4(T&& in) {
     auto ptr{to_address(in)};
     alignas(alignof(uint32_t)) std::array<uint8_t, sizeof(uint32_t)> buf{};
     uint32_t                                                         val;
@@ -196,7 +195,7 @@ private:
                     printValueObject(sint, reader);
                     tok = reader.next();
                     assert(tok == jsont::String);
-                    string_view   slice = reader.dataValue();
+                    string_view slice = reader.dataValue();
                     // Remove starting double-quotes
                     slice.remove_prefix(1);
                     ibufferstream sptr(slice.data(), slice.length());
@@ -286,7 +285,7 @@ enum ErrorCodes {
     eOUTPUT_NO_ACCESS
 };
 
-string readObbFile(path const& obbfile) {
+mapped_file_source readObbFile(path const& obbfile) {
     if (!exists(obbfile)) {
         cerr << "File "sv << obbfile << " does not exist!"sv << endl << endl;
         throw ErrorCodes{eOBB_NOT_FOUND};
@@ -296,24 +295,19 @@ string readObbFile(path const& obbfile) {
         throw ErrorCodes{eOBB_NOT_FILE};
     }
 
-    ifstream fin(obbfile, ios::in | ios::binary);
-    if (!fin.good()) {
+    mapped_file_source fin(obbfile);
+    if (!fin.is_open()) {
         cerr << "Could not open input file "sv << obbfile << "!"sv << endl
              << endl;
         throw ErrorCodes{eOBB_NO_ACCESS};
     }
 
-    auto   len{file_size(obbfile)};
-    string obbcontents(len, '\0');
-    fin.read(&obbcontents[0], static_cast<std::streamsize>(len));
-    fin.close();
-
-    string_view const oggview(obbcontents);
+    string_view const oggview(fin.data(), fin.size());
     if (oggview.substr(0, 8) != "AP_Pack!"sv) {
         cerr << "Input file missing signature!"sv << endl << endl;
         throw ErrorCodes{eOBB_INVALID};
     }
-    return obbcontents;
+    return fin;
 }
 
 void createOutputDir(path const& outdir) {
@@ -378,11 +372,29 @@ void decodeFile(
     }
 }
 
-string_view getData(string_view::const_iterator& it, string_view oggview) {
-    unsigned ptr = Read4(it);
-    unsigned len = Read4(it);
-    return oggview.substr(ptr, len);
-}
+struct File_entry {
+    string_view                   fname;
+    string_view                   fdata;
+    bool                          compressed = false;
+    static constexpr const size_t EntrySize  = 20;
+    string_view                   name() const noexcept { return fname; }
+    string_view                   file() const noexcept { return fdata; }
+    File_entry() noexcept = default;
+    File_entry(string_view::const_iterator it, string_view oggview) noexcept {
+        fname      = getData(it, oggview);
+        fdata      = getData(it, oggview);
+        compressed = fdata.size() != Read4(it);
+    }
+
+private:
+    string_view
+    getData(string_view::const_iterator& it, string_view oggview) const
+        noexcept {
+        unsigned ptr = Read4(it);
+        unsigned len = Read4(it);
+        return oggview.substr(ptr, len);
+    }
+};
 
 extern "C" int main(int argc, char* argv[]);
 
@@ -394,16 +406,15 @@ int main(int argc, char* argv[]) {
             return eWRONG_ARGC;
         }
 
-        path const obbfile(argv[1]);
-        string     obbcontents = readObbFile(obbfile);
+        path const         obbfile(argv[1]);
+        mapped_file_source obbcontents = readObbFile(obbfile);
 
         path const outdir(argv[2]);
         createOutputDir(outdir);
 
-        string_view const           oggview(obbcontents);
-        string_view::const_iterator it   = oggview.cbegin() + 8;
-        unsigned const              hlen = Read4(it);
-        unsigned const              htbl = Read4(it);
+        string_view const oggview(obbcontents.data(), obbcontents.size());
+        unsigned const    hlen = Read4(oggview.cbegin() + 8);
+        unsigned const    htbl = Read4(oggview.cbegin() + 12);
         if (obbcontents.size() != hlen) {
             cerr << "Incorrect length in header!"sv << endl << endl;
             return eOBB_CORRUPT;
@@ -417,45 +428,49 @@ int main(int argc, char* argv[]) {
         // filename = indexed-content/filename
         regex const inkContentRegex(R"regex(Sorcery\d\.inkcontent)regex"s);
 
-        string_view       mainJsonName;
-        string_view       mainJsonData;
-        string_view       inkContentData;
-        bool              mainJsonCompressed = false;
-        zlib_decompressor unzip(zlib::default_window_bits, 1 * 1024 * 1024);
+        File_entry         mainJson;
+        File_entry         inkContent;
+        vector<File_entry> entries;
+        entries.reserve((oggview.size() - htbl) / File_entry::EntrySize);
 
-        it = oggview.cbegin() + htbl;
-        while (it != oggview.cend()) {
-            string_view fname      = getData(it, oggview);
-            string_view fdata      = getData(it, oggview);
-            bool const  compressed = fdata.size() != Read4(it);
-
+        for (auto it = oggview.cbegin() + htbl; it != oggview.cend();
+             it += File_entry::EntrySize) {
+            entries.emplace_back(it, oggview);
             // TODO: These should be obtained by name from OBB wrapper when
             // class is implemented.
+            string_view fname = entries.back().name();
             if (regex_match(fname.cbegin(), fname.cend(), mainJsonRegex)) {
-                mainJsonName       = fname;
-                mainJsonData       = fdata;
-                mainJsonCompressed = compressed;
+                mainJson = entries.back();
                 cout << "\33[2K\rFound main json : "sv << fname << endl;
             } else if (regex_match(
                            fname.cbegin(), fname.cend(), inkContentRegex)) {
-                inkContentData = fdata;
+                inkContent = entries.back();
                 cout << "\33[2K\rFound inkcontent: "sv << fname << endl;
             }
-            cout << "\33[2K\rExtracting file "sv << fname << flush;
+        }
+        std::sort(entries.begin(), entries.end(), [](auto& lhs, auto& rhs) {
+            return lhs.file().data() < rhs.file().data();
+        });
 
-            path outfile(outdir / string(fname));
+        zlib_decompressor unzip(zlib::default_window_bits, 1 * 1024 * 1024);
+
+        for (auto& elem : entries) {
+            cout << "\33[2K\rExtracting file "sv << elem.name() << flush;
+
+            path outfile(outdir / string(elem.name()));
             decodeFile(
-                unzip, outfile, fdata, inkContentData, compressed, false);
+                unzip, outfile, elem.file(), inkContent.file(), elem.compressed,
+                false);
         }
 
-        if (!mainJsonData.empty() && !inkContentData.empty()) {
+        if (!mainJson.file().empty() && !inkContent.file().empty()) {
             string const fname =
-                string(mainJsonName.substr(0, "SorceryN"sv.size())) +
+                string(mainJson.name().substr(0, "SorceryN"sv.size())) +
                 "-Reference.json"s;
             path const outfile(outdir / fname);
             decodeFile(
-                unzip, outfile, mainJsonData, inkContentData,
-                mainJsonCompressed, true);
+                unzip, outfile, mainJson.file(), inkContent.file(),
+                mainJson.compressed, true);
         }
         cout << endl;
     } catch (std::exception const& except) {
