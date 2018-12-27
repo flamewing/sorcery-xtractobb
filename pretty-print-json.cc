@@ -16,15 +16,12 @@
  */
 
 #include <iostream>
+#include <string_view>
 #include <vector>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-
 #include <boost/iostreams/stream.hpp>
-
-#include <string_view>
-using namespace std::literals::string_view_literals;
 
 #include "prettyJson.hh"
 
@@ -37,22 +34,11 @@ using std::ostream;
 using std::string_view;
 using std::vector;
 
-using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
 
 using boost::filesystem::ifstream;
 using boost::filesystem::ofstream;
 using boost::filesystem::path;
-
-#ifdef UNUSED
-#elif defined(__GNUC__)
-#    define UNUSED(x) UNUSED_##x __attribute__((unused))
-#elif defined(__LCLINT__)
-#    define UNUSED(x) /*@unused@*/ x
-#elif defined(__cplusplus)
-#    define UNUSED(x)
-#else
-#    define UNUSED(x) x
-#endif
 
 enum ErrorCodes { eOK, eWRONG_ARGC, eINVALID_ARGS, eFILE_ERROR };
 
