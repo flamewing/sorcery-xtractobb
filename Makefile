@@ -1,20 +1,25 @@
 EXTRACTOBB_BIN := xtractobb
 PRETTYJSON_BIN := pretty-print-json
-BIN := $(EXTRACTOBB_BIN) $(PRETTYJSON_BIN)
+JSON2INK_BIN   := json2ink
+BIN := $(EXTRACTOBB_BIN) $(PRETTYJSON_BIN) $(JSON2INK_BIN)
 
 SRCDIRS := .
 
 CC  ?= gcc
 CXX ?= g++
+YACC ?= bison
+LEXER ?= flex
 
-EXTRACTOBB_SRCSC := xtractobb.cc jsont.cc 
-PRETTYJSON_SRCSC := pretty-print-json.cc jsont.cc
-SRCSC            := $(EXTRACTOBB_SRCSC) $(PRETTYJSON_SRCSC)
-SRCSH            := $(foreach SRCDIR,$(SRCDIRS),$(wildcard $(SRCDIR)/*.hh))
+EXTRACTOBB_SRCSCXX := xtractobb.cc jsont.cc
+PRETTYJSON_SRCSCXX := pretty-print-json.cc jsont.cc
+JSON2INK_SRCSCXX   := parser.cc scanner.cc driver.cc json2ink.cc
+SRCSCXX            := $(EXTRACTOBB_SRCSCXX) $(PRETTYJSON_SRCSCXX) $(JSON2INK_SRCSCXX)
+EXTRA_SRCSCXX      := parser.cc scanner.cc parser.hh location.hh position.hh
 
-EXTRACTOBB_OBJECTS := $(EXTRACTOBB_SRCSC:%.cc=%.o)
-PRETTYJSON_OBJECTS := $(PRETTYJSON_SRCSC:%.cc=%.o)
-OBJECTS       := $(EXTRACTOBB_OBJECTS) $(PRETTYJSON_OBJECTS)
+EXTRACTOBB_OBJECTS := $(EXTRACTOBB_SRCSCXX:%.cc=%.o)
+PRETTYJSON_OBJECTS := $(PRETTYJSON_SRCSCXX:%.cc=%.o)
+JSON2INK_OBJECTS   := $(JSON2INK_SRCSCXX:%.cc=%.o)
+OBJECTS       := $(EXTRACTOBB_OBJECTS) $(PRETTYJSON_OBJECTS) $(JSON2INK_OBJECTS)
 DEPENDENCIES  := $(OBJECTS:%.o=%.d)
 
 DEBUG ?= 0
@@ -33,6 +38,7 @@ LDFLAGS  := -Wl,-rpath,/usr/local/lib
 LIBS     := -lboost_system -lboost_filesystem -lboost_iostreams
 EXTRACTOBB_LIBS :=
 PRETTYJSON_LIBS :=
+JSON2INK_LIBS   :=
 
 # Targets
 all: $(BIN)
@@ -41,7 +47,7 @@ count:
 	wc *.c *.cc *.C *.cpp *.h *.hpp *.hh *.H *.yy *.ll
 
 clean:
-	rm -f *.o *~ $(BIN) *.d
+	rm -f *.o *~ $(BIN) $(EXTRA_SRCSCXX) *.d
 
 .PHONY: all count clean
 
@@ -54,10 +60,23 @@ $(EXTRACTOBB_BIN): $(EXTRACTOBB_OBJECTS)
 $(PRETTYJSON_BIN): $(PRETTYJSON_OBJECTS)
 	$(CXX) -o $(PRETTYJSON_BIN) $(PRETTYJSON_OBJECTS) $(LDFLAGS) $(LIBS) $(PRETTYJSON_LIBS)
 
+$(JSON2INK_BIN): $(JSON2INK_OBJECTS)
+	$(CXX) -o $(JSON2INK_BIN) $(JSON2INK_OBJECTS) $(LDFLAGS) $(LIBS) $(JSON2INK_LIBS)
+
 %.o: %.cc
 	$(CXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $< $(INCFLAGS)
 
+driver.o: parser.cc parser.hh
+
+scanner.o: parser.cc parser.hh
+
+parser.hh: parser.cc
+
+parser.cc: parser.yy
+	$(YACC) -d -o parser.cc parser.yy
+
+scanner.cc: scanner.ll
+	$(LEX) --outfile=scanner.cc scanner.ll
+
 # Dependencies
 -include $(DEPENDENCIES)
-
-

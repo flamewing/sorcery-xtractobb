@@ -11,9 +11,18 @@ reference/*
 # Executables
 pretty-print-json
 xtractobb
+json2ink
 *.pyc
 
 # Build
 *.o
 *.d
 
+# Bison/flex generated files
+location.hh
+parser.cc
+parser.hh
+position.hh
+scanner.cc
+scanner.hh
+stack.hh
