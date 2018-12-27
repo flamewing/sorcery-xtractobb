@@ -14,7 +14,7 @@ EXTRACTOBB_SRCSCXX := xtractobb.cc jsont.cc
 PRETTYJSON_SRCSCXX := pretty-print-json.cc jsont.cc
 JSON2INK_SRCSCXX   := parser.cc scanner.cc driver.cc json2ink.cc
 SRCSCXX            := $(EXTRACTOBB_SRCSCXX) $(PRETTYJSON_SRCSCXX) $(JSON2INK_SRCSCXX)
-EXTRA_SRCSCXX      := parser.cc scanner.cc parser.hh location.hh position.hh
+EXTRA_SRCSCXX      := parser.cc scanner.cc parser.hh location.hh position.hh stack.hh
 
 EXTRACTOBB_OBJECTS := $(EXTRACTOBB_SRCSCXX:%.cc=%.o)
 PRETTYJSON_OBJECTS := $(PRETTYJSON_SRCSCXX:%.cc=%.o)
@@ -74,9 +74,13 @@ parser.hh: parser.cc
 
 parser.cc: parser.yy
 	$(YACC) -d -o parser.cc parser.yy
+	for ff in parser.cc parser.hh location.hh position.hh stack.hh ; do \
+		sed -ri 's%(^.*[^\\*]$$)%\1// NOLINT%' $$ff; \
+	done
 
 scanner.cc: scanner.ll
 	$(LEX) --outfile=scanner.cc scanner.ll
+	sed -ri 's%(^.*[^\\*]$$)%\1// NOLINT%' scanner.cc
 
 # Dependencies
 -include $(DEPENDENCIES)

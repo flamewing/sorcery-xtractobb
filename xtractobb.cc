@@ -73,6 +73,14 @@ namespace zlib = boost::iostreams::zlib;
 using vectorstream = boost::interprocess::basic_vectorstream<std::vector<char>>;
 using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
 
+// Redefine assert macro to avoid clang-tidy noise.
+#undef assert
+#define assert(expr)                                                           \
+    (static_cast<bool>(expr)                                                   \
+         ? void(0)                                                             \
+         : __assert_fail(                                                      \
+               #expr, __FILE__, __LINE__, __ASSERT_FUNCTION)) // NOLINT
+
 // Utility to convert "fancy pointer" to pointer (ported from C++20).
 template <typename T>
 __attribute__((always_inline, const)) inline constexpr T*

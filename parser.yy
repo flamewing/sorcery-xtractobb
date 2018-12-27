@@ -31,6 +31,7 @@
 	class driver;
 
     #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
     #pragma GCC diagnostic ignored "-Wnull-dereference"
     #pragma GCC diagnostic ignored "-Wold-style-cast"
     #pragma GCC diagnostic ignored "-Wsign-conversion"
@@ -61,6 +62,7 @@
     using namespace std::literals::string_view_literals;
 
     #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
     #pragma GCC diagnostic ignored "-Wnull-dereference"
     #pragma GCC diagnostic ignored "-Wold-style-cast"
     #pragma GCC diagnostic ignored "-Wsign-conversion"
