@@ -78,7 +78,7 @@ EOL             \r?\n
 
 \"variables\"       return yy::parser::make_VARIABLES(loc);
 \"buildingBlocks\"  return yy::parser::make_BUILDINGBLOCKS(loc);
-\"initial\"         return yy::parser::make_INITIAL(loc);
+\"initial\"         return yy::parser::make_INITIAL(std::string(yytext, yyleng), loc);
 \"stitches\"        return yy::parser::make_STITCHES(loc);
 "{"                 return yy::parser::make_LCURLY(loc);
 "}"                 return yy::parser::make_RCURLY(loc);

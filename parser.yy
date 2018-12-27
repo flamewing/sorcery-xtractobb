@@ -88,7 +88,6 @@
     COLON           ":"
     VARIABLES       "variables block"
     BUILDINGBLOCKS  "building blocks"
-    INITIAL         "starting function"
     STITCHES        "knot stitches"
 ;
 
@@ -96,9 +95,11 @@
 %token <std::string> NULL    "null"
 %token <std::string> NUMBER  "number"
 %token <std::string> STRING  "string"
+%token <std::string> INITIAL "initial"
 
 %type <std::string> varName
 %type <std::string> varValue
+%type <std::string> strings
 
 %type <bool> JsonMapValueListOpt JsonArrayValueListOpt
 
@@ -131,8 +132,15 @@ varDecl
         {   drv.out << "VAR " << $1 << " = " << $3 << '\n'; }
     ;
 
-varName
+strings
     : STRING
+        {   $$ = $1.substr(1, $1.size()-2);    }
+    | INITIAL
+        {   $$ = $1.substr(1, $1.size()-2);    }
+    ;
+
+varName
+    : strings
         {   $$ = $1.substr(1, $1.size()-2);    }
     ;
 
@@ -143,7 +151,7 @@ varValue
         {   $$ = $1;    }
     | NUMBER
         {   $$ = $1;    }
-    | STRING
+    | strings
         {   $$ = $1;    }
     ;
 
@@ -162,7 +170,7 @@ initialFunction
         {
             drv.out << '\n';
             drv.putIndent();
-            drv.out << R"("initial": )" << $3;
+            drv.out << $1 << ": " << $3;
         }
     ;
 
@@ -173,7 +181,7 @@ stitches
             drv.putIndent();
             drv.out << R"("stitches": )";
         }
-      JsonObject
+      JsonMap
     ;
 
 // JSON for remaining unimplemented parts
