@@ -15,7 +15,7 @@
     #endif
 }
 %{
-    /*
+   /*
     *	Copyright © 2018 Flamewing <flamewing.sonic@gmail.com>
     *
     *	This program is free software: you can redistribute it and/or modify
@@ -79,7 +79,7 @@ EOL             \r?\n
 
 \"variables\"       return yy::parser::make_VARIABLES(loc);
 \"buildingBlocks\"  return yy::parser::make_BUILDINGBLOCKS(loc);
-\"initial\"         return yy::parser::make_INITIAL(std::string(yytext, yyleng), loc);
+\"initial\"         return yy::parser::make_INITIAL(std::string(yytext+1, yyleng-2), loc);
 \"stitches\"        return yy::parser::make_STITCHES(loc);
 "{"                 return yy::parser::make_LCURLY(loc);
 "}"                 return yy::parser::make_RCURLY(loc);
@@ -90,7 +90,7 @@ EOL             \r?\n
 true                return yy::parser::make_BOOL(std::string(yytext, yyleng), loc);
 false               return yy::parser::make_BOOL(std::string(yytext, yyleng), loc);
 null                return yy::parser::make_NULL(std::string(yytext, yyleng), loc);
-{STRING}            return yy::parser::make_STRING(std::string(yytext, yyleng), loc);
+{STRING}            return yy::parser::make_STRING(std::string(yytext+1, yyleng-2), loc);
 {NUMBER}            return yy::parser::make_NUMBER(std::string(yytext, yyleng), loc);
 {BLANK}+            loc.step();
 {EOL}+              loc.lines(yyleng); loc.step();

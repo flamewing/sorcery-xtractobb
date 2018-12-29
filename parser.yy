@@ -1,5 +1,5 @@
 %{
-	/*
+   /*
 	*	Copyright © 2016 Flamewing <flamewing.sonic@gmail.com>
 	*
 	*	This program is free software: you can redistribute it and/or modify
@@ -30,6 +30,8 @@
     #include <string_view>
 	class driver;
 
+    #include "statement.hh"
+
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
     #pragma GCC diagnostic ignored "-Wnull-dereference"
@@ -56,9 +58,12 @@
 
 %code {
     #include <ostream>
-    #include <string_view>
+    #include <vector>
 
+    using std::string;
     using std::string_view;
+    using std::vector;
+    using namespace std::literals::string_literals;
     using namespace std::literals::string_view_literals;
 
     #pragma GCC diagnostic push
@@ -103,58 +108,70 @@
 %type <std::string> varValue
 %type <std::string> strings
 
-%type <bool> JsonMapValueListOpt JsonArrayValueListOpt
+%type <std::vector<GlobalVariableStatement>> varList "global variable listt"
+%type <GlobalVariableStatement>              varDecl "variablle declaration"
 
-%printer { yyo << $$; } <*>;
+%type <bool> JsonMapValueListOpt JsonArrayValueListOpt
 
 %%
 %start unit;
 unit
     : LCURLY                    {   drv.indent++;   }
-        variables COMMA         {   drv.out << "\n";  }
+        variables COMMA
         buildingBlocks COMMA    {   drv.out << ',';   }
         initialFunction COMMA   {   drv.out << ',';   }
-        stitches                {   drv.out << '\n';    }
+        stitches                {   drv.out << '\n';  }
       RCURLY                    {   drv.indent--;   }
     ;
 
 variables
-    : VARIABLES COLON LCURLY
-        {   drv.out << "// Variables\n";    }
-        varList RCURLY
+    : VARIABLES COLON LCURLY varList RCURLY
+        {
+            drv.out << "// Variables\n";
+            for (auto const& elem : $4) {
+                elem.write(drv.out, 0);
+            }
+        }
     ;
 
 varList
     : varList COMMA varDecl
+        {
+            $1.emplace_back(std::move($3));
+            $$.swap($1);
+        }
     | varDecl
+        {
+            $$.emplace_back(std::move($1));
+        }
     ;
 
 varDecl
     : varName COLON varValue
-        {   drv.out << "VAR " << $1 << " = " << $3 << '\n'; }
+        {   $$ = GlobalVariableStatement($1, $3);  }
     ;
 
 strings
     : STRING
-        {   $$ = $1.substr(1, $1.size()-2);    }
+        {   $$ = std::move($1);    }
     | INITIAL
-        {   $$ = $1.substr(1, $1.size()-2);    }
+        {   $$ = std::move($1);    }
     ;
 
 varName
     : strings
-        {   $$ = $1.substr(1, $1.size()-2);    }
+        {   $$ = std::move($1);    }
     ;
 
 varValue
     : BOOL
-        {   $$ = $1;    }
+        {   $$ = std::move($1);    }
     | NULL
-        {   $$ = $1;    }
+        {   $$ = std::move($1);    }
     | NUMBER
-        {   $$ = $1;    }
+        {   $$ = std::move($1);    }
     | strings
-        {   $$ = $1;    }
+        {   $$ = '"' + $1 + '"';    }
     ;
 
 buildingBlocks
@@ -162,7 +179,7 @@ buildingBlocks
         {
             drv.out << '\n';
             drv.putIndent();
-            drv.out << R"("buildingBlocks": )";
+            drv.out << "\"buildingBlocks\": ";
         }
       JsonObject
     ;
@@ -172,7 +189,7 @@ initialFunction
         {
             drv.out << '\n';
             drv.putIndent();
-            drv.out << $1 << ": " << $3;
+            drv.out << '"' << $1 << "\": \"" << $3 << '"';
         }
     ;
 
@@ -181,7 +198,7 @@ stitches
         {
             drv.out << '\n';
             drv.putIndent();
-            drv.out << R"("stitches": )";
+            drv.out << "\"stitches\": ";
         }
       JsonMap
     ;
@@ -237,7 +254,7 @@ JsonMapValue
         {
             drv.out << '\n';
             drv.putIndent();
-            drv.out << $1 << ": ";
+            drv.out << '"' << $1 << "\": ";
         }
       JsonValue
     | initialFunction

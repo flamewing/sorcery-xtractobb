@@ -14,7 +14,7 @@ LEXER ?= flex
 
 EXTRACTOBB_SRCSCXX := xtractobb.cc jsont.cc
 PRETTYJSON_SRCSCXX := pretty-print-json.cc jsont.cc
-JSON2INK_SRCSCXX   := parser.cc scanner.cc driver.cc json2ink.cc
+JSON2INK_SRCSCXX   := parser.cc scanner.cc expression.cc statement.cc driver.cc json2ink.cc
 SRCSCXX            := $(EXTRACTOBB_SRCSCXX) $(PRETTYJSON_SRCSCXX) $(JSON2INK_SRCSCXX)
 EXTRA_SRCSCXX      := parser.cc scanner.cc parser.hh location.hh position.hh stack.hh
 
