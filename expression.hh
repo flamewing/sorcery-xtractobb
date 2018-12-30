@@ -22,63 +22,43 @@
 #include <ostream>
 #include <string>
 
-namespace gsl {
-    template <class T, class = std::enable_if_t<std::is_pointer<T>::value>>
-    using owner = T;
-}
+#include "util.hh"
 
-template <typename TO, typename FROM>
-std::unique_ptr<TO> static_unique_pointer_cast(std::unique_ptr<FROM>&& old) {
-    return std::unique_ptr<TO>{static_cast<TO*>(old.release())};
-}
-
-class Expression {
+class Expression : public clone_inherit<abstract_method<Expression>> {
 public:
-    Expression() noexcept             = default;
-    virtual ~Expression() noexcept    = default;
-    Expression(Expression const&)     = default;
-    Expression(Expression&&) noexcept = default;
-    Expression& operator=(Expression const&) = default;
-    Expression& operator=(Expression&&) noexcept = default;
-
-    std::ostream& write(std::ostream& out) const noexcept {
-        write_impl(out);
-        return out;
+    std::ostream& write(std::ostream& out, bool needParens) const noexcept {
+        if (needParens && !is_simple()) {
+            out << '(';
+            return write_impl(out) << ')';
+        }
+        return write_impl(out);
     }
-    std::unique_ptr<Expression> clone() const {
-        return std::unique_ptr<Expression>(clone_impl());
-    }
+    virtual bool is_simple() const noexcept { return true; }
 
 private:
-    virtual gsl::owner<Expression*> clone_impl() const = 0;
-    virtual bool                    is_simple() const noexcept { return true; }
     virtual std::ostream& write_impl(std::ostream& out) const noexcept = 0;
 };
 
-class VariableRValueExpression : public Expression {
+class VariableRValueExpression
+    : public clone_inherit<VariableRValueExpression, Expression> {
 public:
     explicit VariableRValueExpression(std::string name)
         : varName(std::move(name)) {}
 
 private:
-    gsl::owner<VariableRValueExpression*> clone_impl() const override {
-        return new VariableRValueExpression(*this);
-    }
     std::ostream& write_impl(std::ostream& out) const noexcept override {
         return out << varName;
     }
     std::string varName;
 };
 
-class VariableLValueExpression : public Expression {
+class VariableLValueExpression
+    : public clone_inherit<VariableLValueExpression, Expression> {
 public:
     explicit VariableLValueExpression(std::string name)
         : varName(std::move(name)) {}
 
 private:
-    gsl::owner<VariableLValueExpression*> clone_impl() const override {
-        return new VariableLValueExpression(*this);
-    }
     std::ostream& write_impl(std::ostream& out) const noexcept override {
         return out << varName;
     }
@@ -94,20 +74,30 @@ enum class UnaryOps : uint8_t {
     HasRead
 };
 
-class UnaryOpExpression : public Expression {
+class UnaryOpExpression : public clone_inherit<UnaryOpExpression, Expression> {
 public:
-    UnaryOpExpression(UnaryOps kind, VariableRValueExpression var)
-        : oper(kind), variable(std::move(var)) {}
+    UnaryOpExpression(UnaryOps kind, std::unique_ptr<Expression> ex)
+        : oper(kind), expr(std::move(ex)) {}
+    ~UnaryOpExpression() noexcept override = default;
+    UnaryOpExpression(UnaryOpExpression const& other)
+        : clone_inherit(other), oper(other.oper), expr(other.expr->clone()) {}
+    UnaryOpExpression(UnaryOpExpression&&) noexcept = default;
+    UnaryOpExpression& operator=(UnaryOpExpression const& other) {
+        if (this != &other) {
+            clone_inherit::operator=(other);
+            oper                   = other.oper;
+            expr                   = other.expr->clone();
+        }
+        return *this;
+    }
+    UnaryOpExpression& operator=(UnaryOpExpression&&) noexcept = default;
 
 private:
-    gsl::owner<UnaryOpExpression*> clone_impl() const override {
-        return new UnaryOpExpression(*this);
-    }
     std::ostream& write_impl(std::ostream& out) const noexcept override {
         switch (oper) {
         case UnaryOps::Log10:
             out << "Log10(";
-            variable.write(out);
+            expr->write(out, false);
             return out << ')';
         case UnaryOps::Not:
         case UnaryOps::FlagIsNotSet:
@@ -116,30 +106,29 @@ private:
             [[fallthrough]];
         case UnaryOps::FlagIsSet:
         case UnaryOps::HasRead:
-            return variable.write(out);
+            expr->write(out, true);
+            return out;
         }
         return out;
     }
-    UnaryOps                 oper;
-    VariableRValueExpression variable;
+    UnaryOps                    oper;
+    std::unique_ptr<Expression> expr;
 };
 
 enum class PostfixOps : uint8_t { Increment, Decrement };
 
-class PostfixOpExpression : public Expression {
+class PostfixOpExpression
+    : public clone_inherit<PostfixOpExpression, Expression> {
 public:
     PostfixOpExpression(PostfixOps kind, VariableLValueExpression var)
         : oper(kind), variable(std::move(var)) {}
 
 private:
-    gsl::owner<PostfixOpExpression*> clone_impl() const override {
-        return new PostfixOpExpression(*this);
-    }
     std::ostream& write_impl(std::ostream& out) const noexcept override {
         if (oper == PostfixOps::Increment) {
-            return variable.write(out) << "++\n";
+            return variable.write(out, false) << "++\n";
         }
-        return variable.write(out) << "--\n";
+        return variable.write(out, false) << "--\n";
     }
     PostfixOps               oper;
     VariableLValueExpression variable;
@@ -161,7 +150,8 @@ enum class BinaryOps : uint8_t {
     LessThanOrEqualTo
 };
 
-class BinaryOpExpression : public Expression {
+class BinaryOpExpression
+    : public clone_inherit<BinaryOpExpression, Expression> {
 public:
     BinaryOpExpression(
         BinaryOps kind, std::unique_ptr<Expression> ll,
@@ -169,7 +159,7 @@ public:
         : oper(kind), lhs(std::move(ll)), rhs(std::move(rr)) {}
     ~BinaryOpExpression() noexcept override = default;
     BinaryOpExpression(BinaryOpExpression const& other)
-        : Expression(other), oper(other.oper), lhs(other.lhs->clone()),
+        : clone_inherit(other), oper(other.oper), lhs(other.lhs->clone()),
           rhs(other.rhs->clone()) {}
     BinaryOpExpression(BinaryOpExpression&&) noexcept = default;
     BinaryOpExpression& operator=(BinaryOpExpression const& other) {
@@ -182,13 +172,11 @@ public:
         return *this;
     }
     BinaryOpExpression& operator=(BinaryOpExpression&&) noexcept = default;
+    bool                is_simple() const noexcept override { return false; }
 
 private:
-    gsl::owner<BinaryOpExpression*> clone_impl() const override {
-        return new BinaryOpExpression(*this);
-    }
     std::ostream& write_impl(std::ostream& out) const noexcept override {
-        lhs->write(out);
+        lhs->write(out, true);
         switch (oper) {
         case BinaryOps::Add:
             out << " + ";
@@ -230,16 +218,12 @@ private:
             out << " <= ";
             break;
         }
-        return rhs->write(out);
+        rhs->write(out, true);
+        return out;
     }
     BinaryOps                   oper;
     std::unique_ptr<Expression> lhs;
     std::unique_ptr<Expression> rhs;
 };
-
-inline std::ostream&
-operator<<(std::ostream& out, Expression const& expr) noexcept {
-    return expr.write(out);
-}
 
 #endif
