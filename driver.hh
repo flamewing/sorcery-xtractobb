@@ -16,32 +16,34 @@
  */
 
 #ifndef DRIVER_HH
-#    define DRIVER_HH
+#define DRIVER_HH
 
-#    include <iosfwd>
-#    include <string>
+#include <iosfwd>
+#include <string>
 
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
-#    pragma GCC diagnostic ignored "-Wnull-dereference"
-#    pragma GCC diagnostic ignored "-Wold-style-cast"
-#    pragma GCC diagnostic ignored "-Wsign-conversion"
-#    pragma GCC diagnostic ignored "-Wsign-compare"
-#    pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
-#    ifndef __clang__
-#        pragma GCC diagnostic ignored "-Wsuggest-attribute=malloc"
-#        pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
-#        pragma GCC diagnostic ignored "-Wsuggest-final-methods"
-#        pragma GCC diagnostic ignored "-Wsuggest-final-types"
-#        pragma GCC diagnostic ignored "-Wuseless-cast"
-#    endif
-#    include "parser.hh"
-#    pragma GCC diagnostic pop
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#pragma GCC diagnostic ignored "-Wnull-dereference"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
+#ifndef __clang__
+#    pragma GCC diagnostic ignored "-Wsuggest-attribute=malloc"
+#    pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
+#    pragma GCC diagnostic ignored "-Wsuggest-final-methods"
+#    pragma GCC diagnostic ignored "-Wsuggest-final-types"
+#    pragma GCC diagnostic ignored "-Wuseless-cast"
+#endif
+#include "parser.hh"
+#pragma GCC diagnostic pop
 
 // Give Flex the prototype of yylex we want ...
-#    define YY_DECL yy::parser::symbol_type yylex(driver& drv)
+#define YY_DECL yy::parser::symbol_type yylex(driver& drv)
 // ... and declare it for the parser's sake.
 YY_DECL;
+
+class TopLevelStatement;
 
 // Conducting the whole scanning and parsing of Calc++.
 class driver {
@@ -57,7 +59,10 @@ public:
     // Output stream
     std::ostream& out;
     // The name of the file being parsed.
-    std::string file;
+    std::string                          file;
+    nonstd::value_ptr<FunctionStatement> currFunc;
+    nonstd::value_ptr<StitchStatement>   currKnot;
+    nonstd::value_ptr<KnotStatement>     currStitch;
     // Current indentation level
     size_t indent = 0;
     // Whether to break line before values

@@ -19,7 +19,6 @@
 #define STATEMENT_HH
 
 #include <map>
-#include <memory>
 #include <ostream>
 #include <set>
 #include <string>
@@ -28,12 +27,21 @@
 
 #include "expression.hh"
 #include "util.hh"
+#include "value_ptr.hh"
 
 class driver;
 
 // Generic statement
-class Statement : public clone_inherit<abstract_method<Statement>> {
+class Statement {
 public:
+    Statement() noexcept            = default;
+    virtual ~Statement() noexcept   = default;
+    Statement(Statement const&)     = default;
+    Statement(Statement&&) noexcept = default;
+
+    Statement& operator=(Statement const&) = default;
+    Statement& operator=(Statement&&) noexcept = default;
+
     std::ostream& write(std::ostream& out, size_t indent) const noexcept {
         return write_impl(out, indent);
     }
@@ -46,11 +54,14 @@ private:
 
 protected:
     virtual std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept = 0;
+        noexcept {
+        ignore_unused_variable_warning(indent);
+        return out;
+    }
 };
 
 // A variable assignment statement
-class SetStatement : public clone_inherit<SetStatement, Statement> {
+class SetStatement : public Statement {
 public:
     explicit SetStatement(std::string name) : varName(std::move(name)) {}
 
@@ -65,24 +76,9 @@ private:
 };
 
 // A generic statement containing an expression
-class ExpressionStatement
-    : public clone_inherit<ExpressionStatement, Statement> {
+class ExpressionStatement : public Statement {
 public:
-    explicit ExpressionStatement(std::unique_ptr<Expression> expr)
-        : expression(std::move(expr)) {}
-    ~ExpressionStatement() noexcept override = default;
-    ExpressionStatement(ExpressionStatement const& other)
-        : clone_inherit(*this), expression(other.expression->clone()) {}
-    ExpressionStatement(ExpressionStatement&& other) noexcept(true) = default;
-    ExpressionStatement& operator=(ExpressionStatement const& other) {
-        if (this != &other) {
-            Statement::operator=(other);
-            expression         = other.expression->clone();
-        }
-        return *this;
-    }
-    ExpressionStatement&
-    operator=(ExpressionStatement&& other) noexcept(true) = default;
+    ExpressionStatement() noexcept = default;
 
 protected:
     std::ostream& write_impl(std::ostream& out, size_t indent) const
@@ -92,37 +88,16 @@ protected:
     }
 
 private:
-    std::unique_ptr<Expression> expression;
+    nonstd::value_ptr<Expression> expression;
 };
 
 // A generic statement block statement
-class BlockStatement : public clone_inherit<BlockStatement, Statement> {
+class BlockStatement : public Statement {
 public:
-    using StatementList = std::vector<std::unique_ptr<Statement>>;
+    using StatementList = std::vector<nonstd::value_ptr<Statement>>;
     BlockStatement()    = default;
-    ~BlockStatement() noexcept override = default;
-    BlockStatement(BlockStatement const& other) : clone_inherit(other) {
-        statements.reserve(other.statements.size());
-        for (auto const& elem : other.statements) {
-            statements.emplace_back(elem->clone());
-        }
-    }
-    // noexcept(true) to work around clang-tidy bug
-    BlockStatement(BlockStatement&&) noexcept(true) = default;
-    BlockStatement& operator=(BlockStatement const& other) {
-        if (this != &other) {
-            Statement::operator=(other);
-            statements.clear();
-            statements.reserve(other.statements.size());
-            for (auto const& elem : other.statements) {
-                statements.emplace_back(elem->clone());
-            }
-        }
-        return *this;
-    }
-    BlockStatement& operator=(BlockStatement&&) noexcept(true) = default;
 
-    void add_statement(std::unique_ptr<Statement> stmt) {
+    void add_statement(nonstd::value_ptr<Statement> stmt) {
         statements.emplace_back(std::move(stmt));
     }
     void steal_statements(StatementList& other) noexcept {
@@ -144,7 +119,7 @@ private:
 };
 
 // An if statement
-class ElseStatement : public clone_inherit<ElseStatement, BlockStatement> {
+class ElseStatement : public BlockStatement {
 public:
     ElseStatement() = default;
 
@@ -157,37 +132,17 @@ protected:
 };
 
 // An if statement
-class IfStatement : public clone_inherit<IfStatement, Statement> {
+class IfStatement : public Statement {
 public:
+    IfStatement() noexcept = default;
     IfStatement(
-        std::unique_ptr<Expression> cond, std::unique_ptr<Statement> then)
-        : condExpr(std::move(cond)), thenStmt(std::move(then)), elseStmt() {}
+        nonstd::value_ptr<Expression> cond, nonstd::value_ptr<Statement> then)
+        : condExpr(std::move(cond)), thenStmt(std::move(then)) {}
     IfStatement(
-        std::unique_ptr<Expression> cond, std::unique_ptr<Statement> then,
-        std::unique_ptr<Statement> else_)
+        nonstd::value_ptr<Expression> cond, nonstd::value_ptr<Statement> then,
+        nonstd::value_ptr<Statement> else_)
         : condExpr(std::move(cond)), thenStmt(std::move(then)),
           elseStmt(std::move(else_)) {}
-    ~IfStatement() noexcept override = default;
-    IfStatement(IfStatement const& other)
-        : clone_inherit(*this), condExpr(other.condExpr->clone()),
-          thenStmt(other.thenStmt->clone()),
-          elseStmt(other.elseStmt ? other.elseStmt->clone() : nullptr) {}
-    IfStatement(IfStatement&&) noexcept(true) = default;
-
-    IfStatement& operator=(IfStatement const& other) {
-        if (this != &other) {
-            Statement::operator=(other);
-            condExpr           = other.condExpr->clone();
-            thenStmt           = other.thenStmt->clone();
-            if (other.elseStmt) {
-                elseStmt = other.elseStmt->clone();
-            } else {
-                elseStmt.reset();
-            }
-        }
-        return *this;
-    }
-    IfStatement& operator=(IfStatement&&) noexcept(true) = default;
 
 protected:
     std::ostream& write_impl(std::ostream& out, size_t indent) const
@@ -202,14 +157,13 @@ protected:
     }
 
 private:
-    std::unique_ptr<Expression> condExpr;
-    std::unique_ptr<Statement>  thenStmt;
-    std::unique_ptr<Statement>  elseStmt;
+    nonstd::value_ptr<Expression> condExpr;
+    nonstd::value_ptr<Statement>  thenStmt;
+    nonstd::value_ptr<Statement>  elseStmt;
 };
 
 // A global variable definition
-class GlobalVariableStatement final
-    : public clone_inherit<GlobalVariableStatement, Statement> {
+class GlobalVariableStatement final : public Statement {
 public:
     GlobalVariableStatement() noexcept = default;
     explicit GlobalVariableStatement(std::string name, std::string value)
@@ -241,8 +195,7 @@ private:
 };
 
 // Base for knots, stitches, and functions
-class TopLevelStatement
-    : public clone_inherit<TopLevelStatement, BlockStatement> {
+class TopLevelStatement : public BlockStatement {
 public:
     TopLevelStatement() noexcept = default;
     TopLevelStatement(std::string name_, driver& drv_)
@@ -290,9 +243,9 @@ private:
 };
 
 // Class representing a stitch and all its statements
-class StitchStatement final
-    : public clone_inherit<StitchStatement, TopLevelStatement> {
+class StitchStatement final : public TopLevelStatement {
 public:
+    StitchStatement() noexcept = default;
     StitchStatement(std::string const& name_, driver& drv_) {
         init(name_, drv_);
     }
@@ -305,35 +258,12 @@ private:
 };
 
 // Class representing a knot and all its stitches and statements
-class KnotStatement final
-    : public clone_inherit<KnotStatement, TopLevelStatement> {
+class KnotStatement final : public TopLevelStatement {
 public:
+    KnotStatement() noexcept = default;
     KnotStatement(std::string const& name_, driver& drv_) { init(name_, drv_); }
-    ~KnotStatement() noexcept override = default;
-    KnotStatement(KnotStatement const& other) : clone_inherit(other) {
-        stitches.reserve(other.stitches.size());
-        for (auto const& elem : other.stitches) {
-            stitches.emplace_back(
-                static_unique_pointer_cast<StitchStatement>(elem->clone()));
-        }
-    }
-    KnotStatement(KnotStatement&&) noexcept(true) = default;
 
-    KnotStatement& operator=(KnotStatement const& other) {
-        if (this != &other) {
-            TopLevelStatement::operator=(other);
-            stitches.clear();
-            stitches.reserve(other.stitches.size());
-            for (auto const& elem : other.stitches) {
-                stitches.emplace_back(
-                    static_unique_pointer_cast<StitchStatement>(elem->clone()));
-            }
-        }
-        return *this;
-    }
-    KnotStatement& operator=(KnotStatement&&) noexcept(true) = default;
-
-    void add_stitch(std::unique_ptr<StitchStatement> stitch) {
+    void add_stitch(nonstd::value_ptr<StitchStatement> stitch) {
         if (stitch->getName() == getName()) {
             steal_statements(stitch->get_statements());
         } else {
@@ -359,13 +289,13 @@ protected:
     }
 
 private:
-    std::vector<std::unique_ptr<StitchStatement>> stitches;
+    std::vector<nonstd::value_ptr<StitchStatement>> stitches;
 };
 
 // Class representing a function and all its statements
-class FunctionStatement final
-    : public clone_inherit<FunctionStatement, TopLevelStatement> {
+class FunctionStatement final : public TopLevelStatement {
 public:
+    FunctionStatement() noexcept = default;
     FunctionStatement(std::string const& name_, driver& drv_) {
         init(name_, drv_);
     }

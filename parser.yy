@@ -66,6 +66,9 @@
     using namespace std::literals::string_literals;
     using namespace std::literals::string_view_literals;
 
+    using nonstd::make_value;
+    using nonstd::value_ptr;
+
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
     #pragma GCC diagnostic ignored "-Wnull-dereference"
@@ -199,7 +202,7 @@ strings
     ;
 
 varName
-    : strings
+    : STRING
         {   $$ = std::move($1);    }
     ;
 

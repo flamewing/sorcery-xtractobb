@@ -18,14 +18,22 @@
 #ifndef EXPRESSION_HH
 #define EXPRESSION_HH
 
-#include <memory>
 #include <ostream>
 #include <string>
 
 #include "util.hh"
+#include "value_ptr.hh"
 
-class Expression : public clone_inherit<abstract_method<Expression>> {
+class Expression {
 public:
+    Expression() noexcept             = default;
+    virtual ~Expression() noexcept    = default;
+    Expression(Expression const&)     = default;
+    Expression(Expression&&) noexcept = default;
+
+    Expression& operator=(Expression const&) = default;
+    Expression& operator=(Expression&&) noexcept = default;
+
     std::ostream& write(std::ostream& out, bool needParens) const noexcept {
         if (needParens && !is_simple()) {
             out << '(';
@@ -36,11 +44,12 @@ public:
     virtual bool is_simple() const noexcept { return true; }
 
 private:
-    virtual std::ostream& write_impl(std::ostream& out) const noexcept = 0;
+    virtual std::ostream& write_impl(std::ostream& out) const noexcept {
+        return out;
+    }
 };
 
-class VariableRValueExpression
-    : public clone_inherit<VariableRValueExpression, Expression> {
+class VariableRValueExpression : public Expression {
 public:
     explicit VariableRValueExpression(std::string name)
         : varName(std::move(name)) {}
@@ -52,8 +61,7 @@ private:
     std::string varName;
 };
 
-class VariableLValueExpression
-    : public clone_inherit<VariableLValueExpression, Expression> {
+class VariableLValueExpression : public Expression {
 public:
     explicit VariableLValueExpression(std::string name)
         : varName(std::move(name)) {}
@@ -74,23 +82,10 @@ enum class UnaryOps : uint8_t {
     HasRead
 };
 
-class UnaryOpExpression : public clone_inherit<UnaryOpExpression, Expression> {
+class UnaryOpExpression : public Expression {
 public:
-    UnaryOpExpression(UnaryOps kind, std::unique_ptr<Expression> ex)
+    UnaryOpExpression(UnaryOps kind, nonstd::value_ptr<Expression> ex)
         : oper(kind), expr(std::move(ex)) {}
-    ~UnaryOpExpression() noexcept override = default;
-    UnaryOpExpression(UnaryOpExpression const& other)
-        : clone_inherit(other), oper(other.oper), expr(other.expr->clone()) {}
-    UnaryOpExpression(UnaryOpExpression&&) noexcept = default;
-    UnaryOpExpression& operator=(UnaryOpExpression const& other) {
-        if (this != &other) {
-            clone_inherit::operator=(other);
-            oper                   = other.oper;
-            expr                   = other.expr->clone();
-        }
-        return *this;
-    }
-    UnaryOpExpression& operator=(UnaryOpExpression&&) noexcept = default;
 
 private:
     std::ostream& write_impl(std::ostream& out) const noexcept override {
@@ -111,14 +106,13 @@ private:
         }
         return out;
     }
-    UnaryOps                    oper;
-    std::unique_ptr<Expression> expr;
+    UnaryOps                      oper;
+    nonstd::value_ptr<Expression> expr;
 };
 
 enum class PostfixOps : uint8_t { Increment, Decrement };
 
-class PostfixOpExpression
-    : public clone_inherit<PostfixOpExpression, Expression> {
+class PostfixOpExpression : public Expression {
 public:
     PostfixOpExpression(PostfixOps kind, VariableLValueExpression var)
         : oper(kind), variable(std::move(var)) {}
@@ -150,29 +144,13 @@ enum class BinaryOps : uint8_t {
     LessThanOrEqualTo
 };
 
-class BinaryOpExpression
-    : public clone_inherit<BinaryOpExpression, Expression> {
+class BinaryOpExpression : public Expression {
 public:
     BinaryOpExpression(
-        BinaryOps kind, std::unique_ptr<Expression> ll,
-        std::unique_ptr<Expression> rr)
+        BinaryOps kind, nonstd::value_ptr<Expression> ll,
+        nonstd::value_ptr<Expression> rr)
         : oper(kind), lhs(std::move(ll)), rhs(std::move(rr)) {}
-    ~BinaryOpExpression() noexcept override = default;
-    BinaryOpExpression(BinaryOpExpression const& other)
-        : clone_inherit(other), oper(other.oper), lhs(other.lhs->clone()),
-          rhs(other.rhs->clone()) {}
-    BinaryOpExpression(BinaryOpExpression&&) noexcept = default;
-    BinaryOpExpression& operator=(BinaryOpExpression const& other) {
-        if (this != &other) {
-            Expression::operator=(other);
-            oper                = other.oper;
-            lhs                 = other.lhs->clone();
-            rhs                 = other.rhs->clone();
-        }
-        return *this;
-    }
-    BinaryOpExpression& operator=(BinaryOpExpression&&) noexcept = default;
-    bool                is_simple() const noexcept override { return false; }
+    bool is_simple() const noexcept override { return false; }
 
 private:
     std::ostream& write_impl(std::ostream& out) const noexcept override {
@@ -221,9 +199,9 @@ private:
         rhs->write(out, true);
         return out;
     }
-    BinaryOps                   oper;
-    std::unique_ptr<Expression> lhs;
-    std::unique_ptr<Expression> rhs;
+    BinaryOps                     oper;
+    nonstd::value_ptr<Expression> lhs;
+    nonstd::value_ptr<Expression> rhs;
 };
 
 #endif
