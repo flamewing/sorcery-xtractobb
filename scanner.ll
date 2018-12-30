@@ -42,6 +42,44 @@
     #include "parser.hh"
 
     using namespace std::literals::string_literals;
+    std::string genString(const char* text, size_t len) {
+        std::string ret;
+        ret.reserve(len);
+        for (size_t ii = 0; ii < len; ii++) {
+            if (char c = text[ii]; c != '\\') {
+                ret += c;
+                continue;
+            }
+            ++ii;
+            // assert(ii < len);  // Scanner made sure of this
+            switch (char c = text[ii]; c) {
+            case 'u':
+                ret += '\\';
+                [[fallthrough]];
+            case '"':
+            case '\\':
+            case '/':
+                ret += c;
+                break;
+            case 'b':
+                ret += '\b';
+                break;
+            case 'f':
+                ret += '\f';
+                break;
+            case 'n':
+                ret += '\n';
+                break;
+            case 'r':
+                ret += '\r';
+                break;
+            case 't':
+                ret += '\t';
+                break;
+            };
+        }
+        return ret;
+    }
 %}
 
 %option noyywrap nounput noinput batch debug
@@ -79,7 +117,7 @@ EOL             \r?\n
 
 \"variables\"       return yy::parser::make_VARIABLES(loc);
 \"buildingBlocks\"  return yy::parser::make_BUILDINGBLOCKS(loc);
-\"initial\"         return yy::parser::make_INITIAL(std::string(yytext+1, yyleng-2), loc);
+\"initial\"         return yy::parser::make_INITIAL("initial"s, loc);
 \"stitches\"        return yy::parser::make_STITCHES(loc);
 "{"                 return yy::parser::make_LCURLY(loc);
 "}"                 return yy::parser::make_RCURLY(loc);
@@ -87,10 +125,10 @@ EOL             \r?\n
 "]"                 return yy::parser::make_RSQUARE(loc);
 ","                 return yy::parser::make_COMMA(loc);
 ":"                 return yy::parser::make_COLON(loc);
-true                return yy::parser::make_BOOL(std::string(yytext, yyleng), loc);
-false               return yy::parser::make_BOOL(std::string(yytext, yyleng), loc);
-null                return yy::parser::make_NULL(std::string(yytext, yyleng), loc);
-{STRING}            return yy::parser::make_STRING(std::string(yytext+1, yyleng-2), loc);
+true                return yy::parser::make_BOOL("true"s, loc);
+false               return yy::parser::make_BOOL("false"s, loc);
+null                return yy::parser::make_NULL("null"s, loc);
+{STRING}            return yy::parser::make_STRING(genString(yytext+1, yyleng-2), loc);
 {NUMBER}            return yy::parser::make_NUMBER(std::string(yytext, yyleng), loc);
 {BLANK}+            loc.step();
 {EOL}+              loc.lines(yyleng); loc.step();

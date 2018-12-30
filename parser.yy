@@ -82,6 +82,45 @@
     #endif
 
     #include "driver.hh"
+
+    string escapeString(string const& text) {
+        std::string ret;
+        ret.reserve(text.size());
+        for (size_t ii = 0; ii < text.size(); ii++) {
+            switch (char c = text[ii]; c) {
+            case '"':
+                ret += "\\\"";
+                break;
+            case '\\':
+                if (ii + 1 < text.size() && text[ii+1] == 'u') {
+                    ret += "\\u";
+                    ii++;
+                } else {
+                    ret += "\\\\";
+                }
+                break;
+            case '\b':
+                ret += "\\b";
+                break;
+            case '\f':
+                ret += "\\f";
+                break;
+            case '\n':
+                ret += "\\n";
+                break;
+            case '\r':
+                ret += "\\r";
+                break;
+            case '\t':
+                ret += "\\t";
+                break;
+            default:
+                ret += c;
+                break;
+            };
+        }
+        return ret;
+    }
 }
 
 %define api.token.prefix {TOK_}
@@ -107,6 +146,7 @@
 %type <std::string> varName
 %type <std::string> varValue
 %type <std::string> strings
+%type <std::string> JsonValueSimple
 
 %type <std::vector<GlobalVariableStatement>> varList "global variable listt"
 %type <GlobalVariableStatement>              varDecl "variablle declaration"
@@ -307,7 +347,7 @@ JsonArrayValueList
 JsonValue
     : JsonMap
     | JsonArray
-    | varValue
+    | JsonValueSimple
         {
             if (drv.need_break) {
                 drv.out << '\n';
@@ -316,6 +356,17 @@ JsonValue
             }
             drv.out << $1;
         }
+    ;
+
+JsonValueSimple
+    : BOOL
+        {   $$ = std::move($1);    }
+    | NULL
+        {   $$ = std::move($1);    }
+    | NUMBER
+        {   $$ = std::move($1);    }
+    | strings
+        {   $$ = '"' + escapeString($1) + '"';    }
     ;
 
 %%
