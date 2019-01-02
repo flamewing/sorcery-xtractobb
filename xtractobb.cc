@@ -76,10 +76,9 @@ using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
 // Redefine assert macro to avoid clang-tidy noise.
 #undef assert
 #define assert(expr)                                                           \
-    (static_cast<bool>(expr)                                                   \
-         ? void(0)                                                             \
-         : __assert_fail(                                                      \
-               #expr, __FILE__, __LINE__, __ASSERT_FUNCTION)) // NOLINT
+    ((expr) ? void(0)                                                          \
+            : __assert_fail(                                                   \
+                  #expr, __FILE__, __LINE__, __ASSERT_FUNCTION)) // NOLINT
 
 // Utility to convert "fancy pointer" to pointer (ported from C++20).
 template <typename T>

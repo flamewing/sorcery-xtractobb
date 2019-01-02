@@ -101,17 +101,21 @@ namespace jsont {
 
     private:
         std::string_view translateToken(Token tok) const noexcept;
-        void             skipWS() noexcept;
-        Token            readNumber(char b, size_t token_start) noexcept;
-        Token            readString(char b, size_t token_start) noexcept;
-        Token            readComma() noexcept;
-        Token            readEndBracket(Token token) noexcept;
-        Token            readAtom(std::string_view atom, Token token) noexcept;
-        size_t           availableInput() const noexcept;
-        bool             endOfInput() const noexcept;
-        Token            setToken(Token t) noexcept;
-        Token            setError(ErrorCode error) noexcept;
-        void             initConverter() noexcept;
+
+        void   skipWS() noexcept;
+        bool   readDigits(size_t digits) noexcept;
+        bool   readFraction() noexcept;
+        bool   readExponent() noexcept;
+        Token  readNumber(char b, size_t token_start) noexcept;
+        Token  readString(char b, size_t token_start) noexcept;
+        Token  readComma() noexcept;
+        Token  readEndBracket(Token token) noexcept;
+        Token  readAtom(std::string_view atom, Token token) noexcept;
+        size_t availableInput() const noexcept;
+        bool   endOfInput() const noexcept;
+        Token  setToken(Token t) noexcept;
+        Token  setError(ErrorCode error) noexcept;
+        void   initConverter() noexcept;
 
         std::unordered_map<Token, std::string> _convert;
         std::string_view                       _input;

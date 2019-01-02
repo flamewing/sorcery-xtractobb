@@ -23,6 +23,12 @@ namespace jsont {
     static inline bool safe_isdigit(const char c) {
         return isdigit(static_cast<unsigned char>(c)) != 0;
     }
+    static inline bool is_plus_minus(const char c) {
+        return c == '+' || c == '-';
+    }
+    static inline bool is_exponent_introducer(const char c) {
+        return c == 'E' || c == 'e';
+    }
 
     inline Token Tokenizer::readAtom(string_view atom, Token token) noexcept {
         if (availableInput() < atom.length()) {
@@ -39,8 +45,7 @@ namespace jsont {
         return setToken(token);
     }
 
-    __attribute__((pure))
-    string_view Tokenizer::errorMessage() const noexcept {
+    __attribute__((pure)) string_view Tokenizer::errorMessage() const noexcept {
         switch (_error) {
         case UnexpectedComma:
             return "Unexpected comma"sv;
@@ -122,54 +127,57 @@ namespace jsont {
         }
     }
 
-    inline Token Tokenizer::readNumber(char b, size_t token_start) noexcept {
-        if (safe_isdigit(b) || b == '+' || b == '-') {
-            // We are reading a number
-            Token token = jsont::Integer;
-
-            while (!endOfInput()) {
-                b = _input[_offset++];
-                switch (b) {
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
-                    break;
-                case '.':
-                    token = jsont::Float;
-                    break;
-                case 'E':
-                case 'e':
-                case '-':
-                case '+':
-                    if (token != jsont::Float) {
-                        return setError(MalformedNumberLiteral);
-                    }
-                    break;
-                default:
-                    if (_offset - token_start == 1 &&
-                        (_input[token_start] == '-' ||
-                         _input[token_start] == '+')) {
-                        return setError(MalformedNumberLiteral);
-                    }
-
-                    // rewind the byte that terminated this number
-                    // literal
-                    --_offset;
-
-                    _value = _input.substr(token_start, _offset - token_start);
-                    return setToken(token);
-                }
-            }
-            return setToken(End);
+    inline bool Tokenizer::readDigits(size_t digits) noexcept {
+        while (!endOfInput() && safe_isdigit(_input[_offset++])) {
+            digits++;
         }
-        return setError(InvalidByte);
+        // Rewind the byte that terminated this digit sequence, unless it was
+        // terminated by end-of-input.
+        if (!endOfInput()) {
+            --_offset;
+        }
+        return digits > 0;
+    }
+
+    inline bool Tokenizer::readFraction() noexcept {
+        if (endOfInput() || _input[_offset] != '.') {
+            return true;
+        }
+        setToken(jsont::Float);
+        // Skip '.'
+        _offset++;
+        return readDigits(0);
+    }
+
+    inline bool Tokenizer::readExponent() noexcept {
+        if (endOfInput() || !is_exponent_introducer(_input[_offset])) {
+            return true;
+        }
+        setToken(jsont::Float);
+        // Skip '.'
+        _offset++;
+        if (is_plus_minus(_input[_offset])) {
+            // Skip optional '+'/'-'
+            _offset++;
+        }
+        return readDigits(0);
+    }
+
+    inline Token Tokenizer::readNumber(char b, size_t token_start) noexcept {
+        bool have_digit = safe_isdigit(b);
+        if (!have_digit && b != '-') {
+            return setError(InvalidByte);
+        }
+        setToken(jsont::Integer);
+        // Note: JSON grammar allows for a JSON file with a single number
+        // surrounded by optional whitespace. Thus, we cannot return
+        // end-of-input here or we will miss the number.
+        if (!readDigits(static_cast<size_t>(have_digit)) || !readFraction() ||
+            !readExponent()) {
+            return setError(MalformedNumberLiteral);
+        }
+        _value = _input.substr(token_start, _offset - token_start);
+        return current();
     }
 
     Token Tokenizer::readString(char b, size_t token_start) noexcept {
