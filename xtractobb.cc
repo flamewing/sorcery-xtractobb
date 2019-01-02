@@ -237,29 +237,16 @@ private:
         jsont::Tokenizer reader(src.data(), src.size());
         jsont::Token     tok = reader.current();
         while (true) {
-            switch (tok) {
-            case jsont::Error:
-                cerr << reader.errorMessage() << endl;
-                [[fallthrough]];
-            case jsont::End:
+            if (tok == jsont::FieldName) {
+                handleObjectOrStitch(sint, reader);
+            } else if (tok == jsont::Error || tok == jsont::End) {
+                if (tok == jsont::Error) {
+                    cerr << reader.errorMessage() << endl;
+                }
                 sint.swap_vector(dest);
                 return;
-            case jsont::ObjectStart:
-            case jsont::ArrayStart:
-            case jsont::ObjectEnd:
-            case jsont::ArrayEnd:
-            case jsont::True:
-            case jsont::False:
-            case jsont::Null:
-            case jsont::Integer:
-            case jsont::Float:
-            case jsont::Comma:
-            case jsont::String:
+            } else {
                 printValueRaw(sint, reader);
-                break;
-            case jsont::FieldName:
-                handleObjectOrStitch(sint, reader);
-                break;
             }
             tok = reader.next();
         }
