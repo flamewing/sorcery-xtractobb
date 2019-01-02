@@ -245,16 +245,7 @@ private:
                 sint.swap_vector(dest);
                 return;
             case jsont::ObjectStart:
-            case jsont::ArrayStart: {
-                printValueRaw(sint, reader);
-                auto const next = static_cast<jsont::Token>(
-                    static_cast<uint8_t>(tok) + uint8_t(1));
-                tok = reader.next();
-                if (tok != next) {
-                    continue;
-                }
-                [[fallthrough]];
-            }
+            case jsont::ArrayStart:
             case jsont::ObjectEnd:
             case jsont::ArrayEnd:
             case jsont::True:
