@@ -70,6 +70,10 @@ driver.o: parser.cc parser.hh
 
 scanner.o: parser.cc parser.hh
 
+parser.d: parser.cc
+
+scanner.d: scanner.cc
+
 parser.hh: parser.cc
 
 parser.cc: parser.yy
