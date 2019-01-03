@@ -28,5 +28,5 @@ scanner.hh
 stack.hh
 
 # Test temporaries
-test/input/*
+tests/input/*
 
