@@ -49,7 +49,14 @@ count:
 clean:
 	rm -f *.o *~ $(BIN) $(EXTRA_SRCSCXX) *.d
 
-.PHONY: all count clean
+test: all
+	rm -rf tests/input
+	mkdir -p tests/input
+	cp tests/gold/*.json tests/input
+	./pretty-print-json -w $$(ls -1 tests/input/*.json)
+	diff -ru tests/gold tests/input || echo "Test failed"
+
+.PHONY: all count clean test
 
 .SUFFIXES:
 .SUFFIXES:	.c .cc .C .cpp .o .yy .ll .h .hh

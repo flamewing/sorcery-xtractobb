@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
         }
 
         size_t const len = file_size(jsonfile);
-        ifstream     fin(jsonfile, ios::in);
+        ifstream     fin(jsonfile, ios::in|ios::binary);
         if (!fin.good()) {
             cerr << "Could not open input file "sv << jsonfile
                  << " for reading!"sv << endl
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
         fin.read(&buf[0], static_cast<std::streamsize>(len));
         fin.close();
 
-        ofstream fout(jsonfile, ios::out);
+        ofstream fout(jsonfile, ios::out|ios::binary);
         if (!fout.good()) {
             cerr << "Could not open output file "sv << jsonfile
                  << " for writing!"sv << endl
