@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 EXTRACTOBB_BIN := xtractobb
 PRETTYJSON_BIN := pretty-print-json
 JSON2INK_BIN   := json2ink
@@ -25,13 +27,17 @@ DEPENDENCIES  := $(OBJECTS:%.o=%.d)
 DEBUG ?= 0
 
 ifeq ($(DEBUG),1)
-	DEBUGFLAGS := -O0 -g3
+	DEBUGFLAGS :=-O0 -g3
 else
-	DEBUGFLAGS := -O3 -s
+	DEBUGFLAGS :=-O3 -s
 endif
 
-CFLAGS   := -std=c11 ${DEBUGFLAGS} -MMD -Wall -Wextra -pedantic
-CXXFLAGS := -std=c++17 ${DEBUGFLAGS} -MMD -Wall -Wextra -pedantic -Walloc-zero -Walloca -Wcatch-value=1 -Wcast-align -Wcast-qual -Wconditionally-supported -Wctor-dtor-privacy -Wdisabled-optimization -Wduplicated-branches -Wduplicated-cond -Wextra-semi -Wformat-nonliteral -Wformat-security -Wlogical-not-parentheses -Wlogical-op -Wmissing-include-dirs -Wnon-virtual-dtor -Wnull-dereference -Wold-style-cast -Woverloaded-virtual -Wplacement-new -Wredundant-decls -Wshift-negative-value -Wshift-overflow -Wtrigraphs -Wundef -Wuninitialized -Wuseless-cast -Wwrite-strings -Wformat-signedness -Wcast-align=strict -Wshadow -Wsign-conversion -Wsuggest-attribute=cold -Wsuggest-attribute=const -Wsuggest-attribute=format -Wsuggest-attribute=malloc -Wsuggest-attribute=noreturn -Wsuggest-attribute=pure -Wsuggest-final-methods -Wsuggest-final-types
+START_FLAGS:=-MMD -Wall -Wextra -pedantic -Walloc-zero -Walloca -Wcatch-value=1 -Wcast-align -Wcast-qual -Wconditionally-supported -Wctor-dtor-privacy -Wdisabled-optimization -Wduplicated-branches -Wduplicated-cond -Wextra-semi -Wformat-nonliteral -Wformat-security -Wlogical-not-parentheses -Wlogical-op -Wmissing-include-dirs -Wnon-virtual-dtor -Wnull-dereference -Wold-style-cast -Woverloaded-virtual -Wplacement-new -Wredundant-decls -Wshift-negative-value -Wshift-overflow -Wtrigraphs -Wundef -Wuninitialized -Wuseless-cast -Wwrite-strings -Wformat-signedness -Wcast-align=strict -Wshadow -Wsign-conversion -Wsuggest-attribute=cold -Wsuggest-attribute=const -Wsuggest-attribute=format -Wsuggest-attribute=malloc -Wsuggest-attribute=noreturn -Wsuggest-attribute=pure -Wsuggest-final-methods -Wsuggest-final-types
+
+CXXFLAGS := -std=c++17 ${DEBUGFLAGS}
+$(shell touch tmp.cc)
+CXXFLAGS+=$(foreach flag,$(START_FLAGS),$(shell g++ -Werror $(flag) -c tmp.cc -o tmp.o &> /dev/null && echo "$(flag)"))
+$(shell rm -f tmp.cc tmp.o tmp.d)
 CPPFLAGS :=
 INCFLAGS :=
 ifndef MINGW_PREFIX
@@ -95,7 +101,7 @@ parser.cc: parser.yy
 	done
 
 scanner.cc: scanner.ll
-	$(LEX) --outfile=scanner.cc scanner.ll
+	$(LEXER) --outfile=scanner.cc scanner.ll
 	sed -ri 's%(^.*[^\\*]$$)%\1// NOLINT%' scanner.cc
 
 # Dependencies
