@@ -74,11 +74,13 @@ using vectorstream = boost::interprocess::basic_vectorstream<std::vector<char>>;
 using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
 
 // Redefine assert macro to avoid clang-tidy noise.
-#undef assert
-#define assert(expr)                                                           \
-    ((expr) ? void(0)                                                          \
-            : __assert_fail(                                                   \
-                  #expr, __FILE__, __LINE__, __ASSERT_FUNCTION)) // NOLINT
+#ifndef __MINGW64__
+#    undef assert
+#    define assert(expr)                                                       \
+        ((expr) ? void(0)                                                      \
+                : __assert_fail(                                               \
+                      #expr, __FILE__, __LINE__, __ASSERT_FUNCTION)) // NOLINT
+#endif
 
 // Utility to convert "fancy pointer" to pointer (ported from C++20).
 template <typename T>
