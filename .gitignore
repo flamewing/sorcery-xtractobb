@@ -13,6 +13,7 @@ pretty-print-json
 xtractobb
 json2ink
 *.pyc
+*.exe
 
 # Build
 *.o
