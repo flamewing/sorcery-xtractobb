@@ -2,6 +2,7 @@
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/13717/badge.svg)](https://scan.coverity.com/projects/13717)
 [![CodeFactor](https://www.codefactor.io/repository/github/flamewing/sorcery-xtractobb/badge)](https://www.codefactor.io/repository/github/flamewing/sorcery-xtractobb)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/flamewing/sorcery-xtractobb.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/flamewing/sorcery-xtractobb/alerts/)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/flamewing/sorcery-xtractobb.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/flamewing/sorcery-xtractobb/context:cpp)
 
 Inkle Sorcery! Extractor
 ========================
@@ -24,3 +25,4 @@ TODO
 - [ ] Support for generating new OBB files;
 - [ ] Decompile the reference file into [Ink script](https://github.com/inkle/ink);
 - [ ] Use a different JSON tokenizer.
+- [ ] Get Coverity working again once it supports GCC8/c++17
