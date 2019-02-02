@@ -59,7 +59,8 @@ public:
     // Output stream
     std::ostream& out;
     // The name of the file being parsed.
-    std::string                          file;
+    std::string file;
+    // Current top-level statement
     nonstd::value_ptr<FunctionStatement> currFunc;
     nonstd::value_ptr<StitchStatement>   currKnot;
     nonstd::value_ptr<KnotStatement>     currStitch;
