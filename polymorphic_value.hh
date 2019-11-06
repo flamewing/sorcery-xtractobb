@@ -58,7 +58,8 @@ namespace nonstd {
             control_block& operator=(control_block const&) = default;
             control_block& operator=(control_block&&) noexcept = default;
 
-            [[nodiscard]] virtual std::unique_ptr<control_block> clone() const = 0;
+            [[nodiscard]] virtual std::unique_ptr<control_block>
+            clone() const = 0;
 
             virtual T* ptr() = 0;
         };
@@ -73,7 +74,8 @@ namespace nonstd {
             explicit direct_control_block(Ts&&... ts)
                 : u_(U(std::forward<Ts>(ts)...)) {}
 
-            [[nodiscard]] std::unique_ptr<control_block<T>> clone() const override {
+            [[nodiscard]] std::unique_ptr<control_block<T>>
+            clone() const override {
                 return std::make_unique<direct_control_block>(*this);
             }
 
