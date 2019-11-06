@@ -26,8 +26,8 @@
 #include <vector>
 
 #include "expression.hh"
+#include "polymorphic_value.hh"
 #include "util.hh"
-#include "value_ptr.hh"
 
 class driver;
 
@@ -88,16 +88,16 @@ protected:
     }
 
 private:
-    nonstd::value_ptr<Expression> expression;
+    nonstd::polymorphic_value<Expression> expression;
 };
 
 // A generic statement block statement
 class BlockStatement : public Statement {
 public:
-    using StatementList = std::vector<nonstd::value_ptr<Statement>>;
+    using StatementList = std::vector<nonstd::polymorphic_value<Statement>>;
     BlockStatement()    = default;
 
-    void add_statement(nonstd::value_ptr<Statement> stmt) {
+    void add_statement(nonstd::polymorphic_value<Statement> stmt) {
         statements.emplace_back(std::move(stmt));
     }
     void steal_statements(StatementList& other) noexcept {
@@ -134,13 +134,15 @@ protected:
 // An if statement
 class IfStatement : public Statement {
 public:
-    IfStatement() noexcept = default;
+    IfStatement() = default;
     IfStatement(
-        nonstd::value_ptr<Expression> cond, nonstd::value_ptr<Statement> then)
+        nonstd::polymorphic_value<Expression> cond,
+        nonstd::polymorphic_value<Statement>  then)
         : condExpr(std::move(cond)), thenStmt(std::move(then)) {}
     IfStatement(
-        nonstd::value_ptr<Expression> cond, nonstd::value_ptr<Statement> then,
-        nonstd::value_ptr<Statement> else_)
+        nonstd::polymorphic_value<Expression> cond,
+        nonstd::polymorphic_value<Statement>  then,
+        nonstd::polymorphic_value<Statement>  else_)
         : condExpr(std::move(cond)), thenStmt(std::move(then)),
           elseStmt(std::move(else_)) {}
 
@@ -157,9 +159,9 @@ protected:
     }
 
 private:
-    nonstd::value_ptr<Expression> condExpr;
-    nonstd::value_ptr<Statement>  thenStmt;
-    nonstd::value_ptr<Statement>  elseStmt;
+    nonstd::polymorphic_value<Expression> condExpr;
+    nonstd::polymorphic_value<Statement>  thenStmt;
+    nonstd::polymorphic_value<Statement>  elseStmt;
 };
 
 // A global variable definition
@@ -263,7 +265,7 @@ public:
     KnotStatement() noexcept = default;
     KnotStatement(std::string const& name_, driver& drv_) { init(name_, drv_); }
 
-    void add_stitch(nonstd::value_ptr<StitchStatement> stitch) {
+    void add_stitch(nonstd::polymorphic_value<StitchStatement> stitch) {
         if (stitch->getName() == getName()) {
             steal_statements(stitch->get_statements());
         } else {
@@ -289,7 +291,7 @@ protected:
     }
 
 private:
-    std::vector<nonstd::value_ptr<StitchStatement>> stitches;
+    std::vector<nonstd::polymorphic_value<StitchStatement>> stitches;
 };
 
 // Class representing a function and all its statements

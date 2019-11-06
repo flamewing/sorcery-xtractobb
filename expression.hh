@@ -21,8 +21,8 @@
 #include <ostream>
 #include <string>
 
+#include "polymorphic_value.hh"
 #include "util.hh"
-#include "value_ptr.hh"
 
 class Expression {
 public:
@@ -84,7 +84,7 @@ enum class UnaryOps : uint8_t {
 
 class UnaryOpExpression : public Expression {
 public:
-    UnaryOpExpression(UnaryOps kind, nonstd::value_ptr<Expression> ex)
+    UnaryOpExpression(UnaryOps kind, nonstd::polymorphic_value<Expression> ex)
         : oper(kind), expr(std::move(ex)) {}
 
 private:
@@ -106,8 +106,8 @@ private:
         }
         return out;
     }
-    UnaryOps                      oper;
-    nonstd::value_ptr<Expression> expr;
+    UnaryOps                              oper;
+    nonstd::polymorphic_value<Expression> expr;
 };
 
 enum class PostfixOps : uint8_t { Increment, Decrement };
@@ -147,8 +147,8 @@ enum class BinaryOps : uint8_t {
 class BinaryOpExpression : public Expression {
 public:
     BinaryOpExpression(
-        BinaryOps kind, nonstd::value_ptr<Expression> ll,
-        nonstd::value_ptr<Expression> rr)
+        BinaryOps kind, nonstd::polymorphic_value<Expression> ll,
+        nonstd::polymorphic_value<Expression> rr)
         : oper(kind), lhs(std::move(ll)), rhs(std::move(rr)) {}
     bool is_simple() const noexcept override { return false; }
 
@@ -199,9 +199,9 @@ private:
         rhs->write(out, true);
         return out;
     }
-    BinaryOps                     oper;
-    nonstd::value_ptr<Expression> lhs;
-    nonstd::value_ptr<Expression> rhs;
+    BinaryOps                             oper;
+    nonstd::polymorphic_value<Expression> lhs;
+    nonstd::polymorphic_value<Expression> rhs;
 };
 
 #endif

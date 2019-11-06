@@ -66,8 +66,8 @@
     using namespace std::literals::string_literals;
     using namespace std::literals::string_view_literals;
 
-    using nonstd::make_value;
-    using nonstd::value_ptr;
+    using nonstd::make_polymorphic_value;
+    using nonstd::polymorphic_value;
 
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"

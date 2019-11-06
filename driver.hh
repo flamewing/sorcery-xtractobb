@@ -21,6 +21,8 @@
 #include <iosfwd>
 #include <string>
 
+#include "polymorphic_value.hh"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 #pragma GCC diagnostic ignored "-Wnull-dereference"
@@ -61,9 +63,9 @@ public:
     // The name of the file being parsed.
     std::string file;
     // Current top-level statement
-    nonstd::value_ptr<FunctionStatement> currFunc;
-    nonstd::value_ptr<StitchStatement>   currKnot;
-    nonstd::value_ptr<KnotStatement>     currStitch;
+    nonstd::polymorphic_value<FunctionStatement> currFunc;
+    nonstd::polymorphic_value<StitchStatement>   currKnot;
+    nonstd::polymorphic_value<KnotStatement>     currStitch;
     // Current indentation level
     size_t indent = 0;
     // Whether to break line before values
