@@ -9,8 +9,8 @@ SRCDIRS := .
 
 CC  ?= gcc
 CXX ?= g++
-YACC ?= bison
-LEXER ?= flex
+YACC := bison
+LEXER := flex
 
 EXTRACTOBB_SRCSCXX := xtractobb.cc jsont.cc
 PRETTYJSON_SRCSCXX := pretty-print-json.cc jsont.cc
@@ -95,7 +95,7 @@ scanner.d: scanner.cc
 parser.hh: parser.cc
 
 parser.cc: parser.yy
-	$(YACC) -d -o parser.cc parser.yy
+	$(YACC) -Wno-yacc -d -o parser.cc parser.yy
 	for ff in parser.cc parser.hh location.hh position.hh stack.hh ; do \
 		sed -ri 's%(^.*[^\\*]$$)%\1// NOLINT%' $$ff; \
 	done
