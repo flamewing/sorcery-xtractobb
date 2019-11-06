@@ -11,7 +11,9 @@
 #include "jsont.hh"
 
 using std::stod;
+using std::strtod;
 using std::stoll;
+using std::strtoll;
 using std::string;
 using std::string_view;
 using namespace std::literals::string_view_literals;
