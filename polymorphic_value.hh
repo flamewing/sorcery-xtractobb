@@ -58,7 +58,7 @@ namespace nonstd {
             control_block& operator=(control_block const&) = default;
             control_block& operator=(control_block&&) noexcept = default;
 
-            virtual std::unique_ptr<control_block> clone() const = 0;
+            [[nodiscard]] virtual std::unique_ptr<control_block> clone() const = 0;
 
             virtual T* ptr() = 0;
         };
@@ -73,7 +73,7 @@ namespace nonstd {
             explicit direct_control_block(Ts&&... ts)
                 : u_(U(std::forward<Ts>(ts)...)) {}
 
-            std::unique_ptr<control_block<T>> clone() const override {
+            [[nodiscard]] std::unique_ptr<control_block<T>> clone() const override {
                 return std::make_unique<direct_control_block>(*this);
             }
 
@@ -127,7 +127,7 @@ namespace nonstd {
     public:
         bad_polymorphic_value_construction() noexcept = default;
 
-        const char* what() const noexcept override {
+        [[nodiscard]] const char* what() const noexcept override {
             return "Dynamic and static type mismatch in polymorphic_value "
                    "construction";
         }

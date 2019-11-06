@@ -45,12 +45,12 @@ public:
     std::ostream& write(std::ostream& out, size_t indent) const noexcept {
         return write_impl(out, indent);
     }
-    std::string getIndent(size_t indent) const {
+    [[nodiscard]] std::string getIndent(size_t indent) const {
         return std::string(indent, ' ');
     }
 
 private:
-    virtual bool is_simple() const noexcept { return true; }
+    [[nodiscard]] virtual bool is_simple() const noexcept { return true; }
 
 protected:
     virtual std::ostream& write_impl(std::ostream& out, size_t indent) const
@@ -202,7 +202,7 @@ public:
     TopLevelStatement() noexcept = default;
     TopLevelStatement(std::string name_, driver& drv_)
         : drv(&drv_), name(std::move(name_)) {}
-    std::string const& getName() const noexcept { return name; }
+    [[nodiscard]] std::string const& getName() const noexcept { return name; }
 
 protected:
     void init(std::string name_, driver& drv_) {

@@ -41,7 +41,7 @@ public:
         }
         return write_impl(out);
     }
-    virtual bool is_simple() const noexcept { return true; }
+    [[nodiscard]] virtual bool is_simple() const noexcept { return true; }
 
 private:
     virtual std::ostream& write_impl(std::ostream& out) const noexcept {
@@ -150,7 +150,7 @@ public:
         BinaryOps kind, nonstd::polymorphic_value<Expression> ll,
         nonstd::polymorphic_value<Expression> rr)
         : oper(kind), lhs(std::move(ll)), rhs(std::move(rr)) {}
-    bool is_simple() const noexcept override { return false; }
+    [[nodiscard]] bool is_simple() const noexcept override { return false; }
 
 private:
     std::ostream& write_impl(std::ostream& out) const noexcept override {

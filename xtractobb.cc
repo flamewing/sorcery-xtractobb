@@ -364,8 +364,8 @@ struct File_entry {
     string_view                   fdata;
     bool                          compressed = false;
     static constexpr const size_t EntrySize  = 20;
-    string_view                   name() const noexcept { return fname; }
-    string_view                   file() const noexcept { return fdata; }
+    [[nodiscard]] string_view     name() const noexcept { return fname; }
+    [[nodiscard]] string_view     file() const noexcept { return fdata; }
     File_entry() noexcept = default;
     File_entry(string_view::const_iterator it, string_view oggview) noexcept {
         fname      = getData(it, oggview);
