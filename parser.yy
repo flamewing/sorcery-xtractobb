@@ -203,6 +203,11 @@
 %type <std::vector<nonstd::polymorphic_value<TopLevelStatement>>> functionList "function list"
 %type <nonstd::polymorphic_value<TopLevelStatement>>              function     "function definition"
 
+%type <std::vector<nonstd::polymorphic_value<Statement>>> statementList  "list of statements"
+%type <nonstd::polymorphic_value<Statement>>              statement      "single statements"
+%type <nonstd::polymorphic_value<Statement>>              ifStatement    "condition statements"
+%type <nonstd::polymorphic_value<Statement>>              nonIfStatement "non-condition statements"
+%type <nonstd::polymorphic_value<Statement>>              optElse        "otherwise statements"
 %type <nonstd::polymorphic_value<BlockStatement>>         statementBlock "statement block"
 
 %type <nonstd::polymorphic_value<Expression>> expression  "expression"
@@ -218,10 +223,10 @@
 unit
     : LCURLY                    {   drv.indent++; }
         variables COMMA
-        buildingBlocks COMMA    {   drv.out << ','; }
-        initialFunction COMMA   {   drv.out << ','; }
-        stitches                {   drv.out << '\n'; }
-      RCURLY                    {   drv.indent--; }
+//        buildingBlocks COMMA    {   drv.out << ','; }
+//        initialFunction COMMA   {   drv.out << ','; }
+//        stitches                {   drv.out << '\n'; }
+//      RCURLY                    {   drv.indent--; }
     ;
 
 variables
@@ -280,6 +285,7 @@ varValue
         {   $$ = '"' + $1 + '"'; }
     ;
 
+/*
 buildingBlocks
     : BUILDINGBLOCKS COLON
         {
@@ -318,6 +324,76 @@ functionName
 statementBlock
     : JsonArray
         {   $$ = make_polymorphic_value<BlockStatement>(); }
+    | LSQUARE statementList RSQUARE
+        {
+            $$ = make_polymorphic_value<BlockStatement>(std::move($1), drv);
+            $$->steal_statements($2->get_statements());
+        }
+    | LSQUARE RSQUARE
+
+statementList
+    : statementList COMMA statement
+        {
+            $1.emplace_back($3);
+            $$.swap($1);
+        }
+    | statement
+        {   $$.emplace_back($1); }
+    ;
+
+statement
+    : contentStatement
+        {   $$ = std::move($1); }
+    | choiceStatement
+        {   $$ = std::move($1); }
+    | divertStatement
+        {   $$ = std::move($1); }
+    | sequenceStatement
+        {   $$ = std::move($1); }
+    | cycleStatement
+        {   $$ = std::move($1); }
+    | returnStatement
+        {   $$ = std::move($1); }
+    | doFuncsStatement
+        {   $$ = std::move($1); }
+    | buildingBlockStatement
+        {   $$ = std::move($1); }
+    | ifStatement
+        {   $$ = std::move($1); }
+    ;
+
+nonIfStatement
+    : expression
+        {   $$ = make_polymorphic_value<Statement, ExpressionStatement>(
+                std::move($1)); }
+    | SET COLON LSQUARE varName COMMA expression RSQUARE
+        {   $$ = make_polymorphic_value<Statement, AssignmentStatement>(
+                std::move($4), std::move($6), declare_variable($4, true, true, drv)); }
+    | SET COLON LSQUARE LCURLY GET COLON varName RCURLY COMMA expression RSQUARE
+        {   $$ = make_polymorphic_value<Statement, AssignmentStatement>(
+                std::move($7), std::move($10), declare_variable($7, true, false, drv)); }
+    | RETURN expression
+        {   $$ = make_polymorphic_value<Statement, ReturnStatement>(
+                std::move($2)); }
+    ;
+
+ifStatement
+    : CONDITION COLON LCURLY
+        expression
+      RCURLY COMMA
+      THEN COLON statementBlock
+      optElse
+    ;
+
+optElse
+    : OTHERWISE COLON LSQUARE LCURLY ifStatement RCURLY RSQUARE
+        {   $$ = make_polymorphic_value<Statement, ElseStatement>(
+                std::move($7), std::move($10), declare_variable($7, true, false, drv)); }
+    | OTHERWISE COLON statementBlock
+        {   $$ = make_polymorphic_value<Statement, ElseStatement>(
+                std::move($7), std::move($10), declare_variable($7, true, false, drv)); }
+    ;
+*/
 
 unaryOps
     : LOG
