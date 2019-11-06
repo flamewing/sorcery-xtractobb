@@ -40,6 +40,7 @@
     #pragma GCC diagnostic ignored "-Wsign-compare"
     #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
     #ifndef __clang__
+    #   pragma GCC diagnostic ignored "-Wsuggest-attribute=const"
     #   pragma GCC diagnostic ignored "-Wsuggest-attribute=malloc"
     #   pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
     #   pragma GCC diagnostic ignored "-Wsuggest-final-methods"
@@ -77,6 +78,7 @@
     #pragma GCC diagnostic ignored "-Wsign-compare"
     #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
     #ifndef __clang__
+    #   pragma GCC diagnostic ignored "-Wsuggest-attribute=const"
     #   pragma GCC diagnostic ignored "-Wsuggest-attribute=malloc"
     #   pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
     #   pragma GCC diagnostic ignored "-Wsuggest-final-methods"
