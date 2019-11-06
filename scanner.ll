@@ -119,6 +119,7 @@ EOL             \r?\n
 \"buildingBlocks\"  return yy::parser::make_BUILDINGBLOCKS(loc);
 \"initial\"         return yy::parser::make_INITIAL("initial"s, loc);
 \"stitches\"        return yy::parser::make_STITCHES(loc);
+
 "{"                 return yy::parser::make_LCURLY(loc);
 "}"                 return yy::parser::make_RCURLY(loc);
 "["                 return yy::parser::make_LSQUARE(loc);

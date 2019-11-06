@@ -161,12 +161,12 @@
 %%
 %start unit;
 unit
-    : LCURLY                    {   drv.indent++;   }
+    : LCURLY                    {   drv.indent++; }
         variables COMMA
-        buildingBlocks COMMA    {   drv.out << ',';   }
-        initialFunction COMMA   {   drv.out << ',';   }
-        stitches                {   drv.out << '\n';  }
-      RCURLY                    {   drv.indent--;   }
+        buildingBlocks COMMA    {   drv.out << ','; }
+        initialFunction COMMA   {   drv.out << ','; }
+        stitches                {   drv.out << '\n'; }
+      RCURLY                    {   drv.indent--; }
     ;
 
 variables
@@ -186,37 +186,35 @@ varList
             $$.swap($1);
         }
     | varDecl
-        {
-            $$.emplace_back(std::move($1));
-        }
+        {   $$.emplace_back(std::move($1)); }
     ;
 
 varDecl
     : varName COLON varValue
-        {   $$ = GlobalVariableStatement($1, $3);  }
+        {   $$ = GlobalVariableStatement($1, $3); }
     ;
 
 strings
     : STRING
-        {   $$ = std::move($1);    }
+        {   $$ = std::move($1); }
     | INITIAL
-        {   $$ = std::move($1);    }
+        {   $$ = std::move($1); }
     ;
 
 varName
     : STRING
-        {   $$ = std::move($1);    }
+        {   $$ = std::move($1); }
     ;
 
 varValue
     : BOOL
-        {   $$ = std::move($1);    }
+        {   $$ = std::move($1); }
     | NULL
-        {   $$ = std::move($1);    }
+        {   $$ = std::move($1); }
     | NUMBER
-        {   $$ = std::move($1);    }
+        {   $$ = std::move($1); }
     | strings
-        {   $$ = '"' + $1 + '"';    }
+        {   $$ = '"' + $1 + '"'; }
     ;
 
 buildingBlocks
@@ -284,7 +282,7 @@ JsonMapValueListOpt
     : JsonMapValueList
         {   $$ = false; }
     | /* empty */
-        {   $$ = true;  }
+        {   $$ = true; }
     ;
 
 JsonMapValueList
@@ -336,7 +334,7 @@ JsonArrayValueListOpt
     : JsonArrayValueList
         {   $$ = false; }
     | /* empty */
-        {   $$ = true;  }
+        {   $$ = true; }
     ;
 
 JsonArrayValueList
@@ -365,13 +363,13 @@ JsonValue
 
 JsonValueSimple
     : BOOL
-        {   $$ = std::move($1);    }
+        {   $$ = std::move($1); }
     | NULL
-        {   $$ = std::move($1);    }
+        {   $$ = std::move($1); }
     | NUMBER
-        {   $$ = std::move($1);    }
+        {   $$ = std::move($1); }
     | strings
-        {   $$ = '"' + escapeString($1) + '"';    }
+        {   $$ = '"' + escapeString($1) + '"'; }
     ;
 
 %%
