@@ -60,30 +60,100 @@ protected:
     }
 };
 
-// A variable assignment statement
-class SetStatement : public Statement {
+// A generic statement containing content
+class ContentStatement : public Statement {
 public:
-    explicit SetStatement(std::string name) : varName(std::move(name)) {}
+    ContentStatement() = default;
+    explicit ContentStatement(std::string text) : content(std::move(text)) {}
 
 protected:
     std::ostream& write_impl(std::ostream& out, size_t indent) const
         noexcept override {
-        return out << getIndent(indent) << "~ " << varName;
+        return out << getIndent(indent) << content << '\n';
     }
 
 private:
-    std::string varName;
+    std::string content;
 };
 
-// A generic statement containing an expression
-class ExpressionStatement : public Statement {
+// A generic statement containing a choice
+class ChoiceStatement : public Statement {
 public:
-    ExpressionStatement() noexcept = default;
+    ChoiceStatement() = default;
+    explicit ChoiceStatement(
+        std::string text, nonstd::polymorphic_value<Expression> cond = {})
+        : content(std::move(text)), condition(std::move(cond)) {}
+
+protected:
+    std::ostream& write_impl(std::ostream& out, size_t indent) const
+        noexcept override {
+        out << getIndent(indent) << "* ";
+        if (condition) {
+            out << "{ ";
+            condition->write(out, false) << " }  ";
+        }
+        return out << content << '\n';
+    }
+
+private:
+    std::string                           content;
+    nonstd::polymorphic_value<Expression> condition;
+};
+
+// A variable assignment statement
+class AssignmentStatement : public Statement {
+public:
+    explicit AssignmentStatement(
+        std::string name, nonstd::polymorphic_value<Expression> expr, bool decl)
+        : varName(std::move(name)), expression(std::move(expr)), declare(decl) {
+    }
 
 protected:
     std::ostream& write_impl(std::ostream& out, size_t indent) const
         noexcept override {
         out << getIndent(indent) << "~ ";
+        if (declare) {
+            out << "temp ";
+        }
+        out << varName;
+        return expression->write(out, false) << '\n';
+    }
+
+private:
+    std::string                           varName;
+    nonstd::polymorphic_value<Expression> expression;
+    bool                                  declare;
+};
+
+// A generic statement containing an expression
+class ExpressionStatement : public Statement {
+public:
+    ExpressionStatement() = default;
+    explicit ExpressionStatement(nonstd::polymorphic_value<Expression> expr)
+        : expression(std::move(expr)) {}
+
+protected:
+    std::ostream& write_impl(std::ostream& out, size_t indent) const
+        noexcept override {
+        out << getIndent(indent) << "~ ";
+        return expression->write(out, false) << '\n';
+    }
+
+private:
+    nonstd::polymorphic_value<Expression> expression;
+};
+
+// A generic statement containing an expression
+class ReturnStatement : public Statement {
+public:
+    ReturnStatement() = default;
+    explicit ReturnStatement(nonstd::polymorphic_value<Expression> expr)
+        : expression(std::move(expr)) {}
+
+protected:
+    std::ostream& write_impl(std::ostream& out, size_t indent) const
+        noexcept override {
+        out << getIndent(indent) << "~ return ";
         return expression->write(out, false) << '\n';
     }
 
@@ -203,6 +273,12 @@ public:
     TopLevelStatement(std::string name_, driver& drv_)
         : drv(&drv_), name(std::move(name_)) {}
     [[nodiscard]] std::string const& getName() const noexcept { return name; }
+    [[nodiscard]] bool has_variable(std::string const& var) const {
+        return headerVariables.find(var) != headerVariables.cend();
+    }
+    void add_variable(std::string const& var, bool ref) {
+        headerVariables.emplace(var, ref);
+    }
 
 protected:
     void init(std::string name_, driver& drv_) {

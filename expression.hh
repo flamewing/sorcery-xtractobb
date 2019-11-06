@@ -49,6 +49,32 @@ private:
     }
 };
 
+// A generic statement containing content
+class ContentExpression : public Expression {
+public:
+    ContentExpression() = default;
+    explicit ContentExpression(std::string text) : content(std::move(text)) {}
+
+protected:
+    std::ostream& write_impl(std::ostream& out) const noexcept override {
+        return out << '"' << content << '"';
+    }
+
+private:
+    std::string content;
+};
+
+class DivertExpression : public Expression {
+public:
+    explicit DivertExpression(std::string trg) : target(std::move(trg)) {}
+
+private:
+    std::ostream& write_impl(std::ostream& out) const noexcept override {
+        return out << "  -> " << target;
+    }
+    std::string target;
+};
+
 class VariableRValueExpression : public Expression {
 public:
     explicit VariableRValueExpression(std::string name)

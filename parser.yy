@@ -88,6 +88,9 @@
 
     #include "driver.hh"
 
+    extern void start_math();
+    extern void end_math();
+
     string escapeString(string const& text) {
         std::string ret;
         ret.reserve(text.size());
@@ -126,6 +129,17 @@
         }
         return ret;
     }
+
+    bool declare_variable(std::string& name, bool isSet, bool isRef, driver& drv) {
+        if (GlobalVariableStatement::is_global(name)) {
+            return false;
+        }
+        if (!drv.current->has_variable(name)) {
+            drv.current->add_variable(name, isRef);
+            return isSet;
+        }
+        return false;
+    }
 }
 
 %define api.token.prefix {TOK_}
@@ -140,6 +154,35 @@
     VARIABLES       "variables block"
     BUILDINGBLOCKS  "building blocks"
     STITCHES        "knot stitches"
+    GET             "variable rvalue"
+    SET             "variable lvalue"
+    FUNC            "mathematics block"
+    PARAMS          "parameter pack"
+    RETURN          "return statement"
+    CONDITION       "condition statement"
+    THEN            "then clause"
+    OTHERWISE       "else clause"
+    ADD             "Add"
+    SUB             "Subtract"
+    INC             "Increment"
+    DEC             "Decrement"
+    DIV             "Divide"
+    MOD             "Mod"
+    MUL             "Multiply"
+    LOG             "Log10"
+    AND             "And"
+    OR              "Or"
+    NOT             "Not"
+    FLAGSET         "FlagIsSet"
+    FLAGCLEAR       "FlagIsNotSet"
+    NOTREAD         "HasNotRead"
+    HASREAD         "HasRead"
+    EQ              "Equals"
+    NE              "NotEquals"
+    GT              "GreaterThan"
+    GE              "GreaterThanOrEqualTo"
+    LT              "LessThan"
+    LE              "LessThanOrEqualTo"
 ;
 
 %token <std::string> BOOL    "boolean"
@@ -148,13 +191,25 @@
 %token <std::string> STRING  "string"
 %token <std::string> INITIAL "initial"
 
-%type <std::string> varName
-%type <std::string> varValue
+%type <std::string> varName      "variable name"
+%type <std::string> varValue     "variable value"
 %type <std::string> strings
+%type <std::string> functionName "function name"
 %type <std::string> JsonValueSimple
 
 %type <std::vector<GlobalVariableStatement>> varList "global variable listt"
 %type <GlobalVariableStatement>              varDecl "variablle declaration"
+
+%type <std::vector<nonstd::polymorphic_value<TopLevelStatement>>> functionList "function list"
+%type <nonstd::polymorphic_value<TopLevelStatement>>              function     "function definition"
+
+%type <nonstd::polymorphic_value<BlockStatement>>         statementBlock "statement block"
+
+%type <nonstd::polymorphic_value<Expression>> expression  "expression"
+
+%type <UnaryOps>   unaryOps      "unary mathematical operations"
+%type <PostfixOps> postfixOps    "unary postfix mathematical operations"
+%type <BinaryOps>  binaryOps      "binary mathematical operations"
 
 %type <bool> JsonMapValueListOpt JsonArrayValueListOpt
 
@@ -172,7 +227,7 @@ unit
 variables
     : VARIABLES COLON LCURLY varList RCURLY
         {
-            drv.out << "// Variables\n";
+            drv.out << "// Global variables\n";
             for (auto const& elem : $4) {
                 elem.write(drv.out, 0);
             }
@@ -199,6 +254,14 @@ strings
         {   $$ = std::move($1); }
     | INITIAL
         {   $$ = std::move($1); }
+    | GET
+        {   $$ = "get"s; }
+    | SET
+        {   $$ = "set"s; }
+    | FUNC
+        {   $$ = "func"s; }
+    | PARAMS
+        {   $$ = "params"s; }
     ;
 
 varName
@@ -224,7 +287,119 @@ buildingBlocks
             drv.putIndent();
             drv.out << "\"buildingBlocks\": ";
         }
-      JsonObject
+      LCURLY functionList RCURLY
+    ;
+
+functionList
+    : functionList COMMA function
+        {
+            $1.emplace_back($3);
+            $$.swap($1);
+        }
+    | function
+        {   $$.emplace_back($1); }
+    ;
+
+function
+    : functionName COLON
+        {   drv.current =
+                make_polymorphic_value<TopLevelStatement, FunctionStatement>(std::move($1), drv); }
+      statementBlock
+        {
+            $$ = std::move(drv.current);
+            $$->steal_statements($4->get_statements());
+        }
+
+functionName
+    : STRING
+        {   $$ = std::move($1); }
+    ;
+
+statementBlock
+    : JsonArray
+        {   $$ = make_polymorphic_value<BlockStatement>(); }
+
+unaryOps
+    : LOG
+        {   $$ = UnaryOps::Log10; }
+    | NOT
+        {   $$ = UnaryOps::Not; }
+    | FLAGSET
+        {   $$ = UnaryOps::FlagIsSet; }
+    | FLAGCLEAR
+        {   $$ = UnaryOps::FlagIsNotSet; }
+    | NOTREAD
+        {   $$ = UnaryOps::HasNotRead; }
+    | HASREAD
+        {   $$ = UnaryOps::HasRead; }
+    ;
+
+postfixOps
+    : INC
+        {   $$ = PostfixOps::Increment; }
+    | DEC
+        {   $$ = PostfixOps::Decrement; }
+    ;
+
+binaryOps
+    : ADD
+        {   $$ = BinaryOps::Add; }
+    | SUB
+        {   $$ = BinaryOps::Subtract; }
+    | DIV
+        {   $$ = BinaryOps::Divide; }
+    | MOD
+        {   $$ = BinaryOps::Mod; }
+    | MUL
+        {   $$ = BinaryOps::Multiply; }
+    | AND
+        {   $$ = BinaryOps::And; }
+    | OR
+        {   $$ = BinaryOps::Or; }
+    | EQ
+        {   $$ = BinaryOps::Equals; }
+    | NE
+        {   $$ = BinaryOps::NotEquals; }
+    | GT
+        {   $$ = BinaryOps::GreaterThan; }
+    | GE
+        {   $$ = BinaryOps::GreaterThanOrEqualTo; }
+    | LT
+        {   $$ = BinaryOps::LessThan; }
+    | LE
+        {   $$ = BinaryOps::LessThanOrEqualTo; }
+    ;
+
+expression
+    : FUNC COLON
+        {   start_math(); }
+      unaryOps
+        {   end_math(); }
+      PARAMS COLON LSQUARE expression RSQUARE
+        {   $$ = make_polymorphic_value<Expression, UnaryOpExpression>(
+                $4, std::move($9)); }
+    | FUNC COLON
+        {   start_math(); }
+      postfixOps
+        {   end_math(); }
+      PARAMS COLON LSQUARE varName RSQUARE
+        {   $$ = make_polymorphic_value<Expression, PostfixOpExpression>(
+                $4, VariableLValueExpression(std::move($9))); }
+    | FUNC COLON
+        {   start_math(); }
+      binaryOps
+        {   end_math(); }
+      PARAMS COLON LSQUARE expression COMMA expression RSQUARE
+        {   $$ = make_polymorphic_value<Expression, BinaryOpExpression>(
+                $4, std::move($9), std::move($11)); }
+    | GET COLON varName
+        {   declare_variable($3, false, false, drv);
+            $$ = make_polymorphic_value<Expression, VariableRValueExpression>(
+                std::move($3)); }
+    | GET COLON LCURLY GET COLON varName RCURLY
+        {   declare_variable($6, false, true, drv);
+            $$ = make_polymorphic_value<Expression, VariableRValueExpression>(
+                std::move($6)); }
     ;
 
 initialFunction
@@ -293,7 +468,7 @@ JsonMapValueList
     ;
 
 JsonMapValue
-    : STRING COLON
+    : strings COLON
         {
             drv.out << '\n';
             drv.putIndent();

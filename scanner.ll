@@ -83,6 +83,10 @@
 %}
 
 %option noyywrap nounput noinput batch debug
+%option noyy_top_state
+
+%option stack
+%s math
 
 DIGIT           [0-9]
 ONENINE         [1-9]
@@ -114,6 +118,38 @@ EOL             \r?\n
     // Code run each time yylex is called.
     loc.step();
 %}
+
+\"get\"             return yy::parser::make_GET(loc);
+\"set\"             return yy::parser::make_SET(loc);
+\"func\"            return yy::parser::make_FUNC(loc);
+\"params\"          return yy::parser::make_PARAMS(loc);
+\"return\"          return yy::parser::make_RETURN(loc);
+\"condition\"       return yy::parser::make_CONDITION(loc);
+\"then\"            return yy::parser::make_THEN(loc);
+\"otherwise\"       return yy::parser::make_OTHERWISE(loc);
+
+
+<math>\"Add\"                     return yy::parser::make_ADD(loc);
+<math>\"Subtract\"                return yy::parser::make_SUB(loc);
+<math>\"Increment\"               return yy::parser::make_INC(loc);
+<math>\"Decrement\"               return yy::parser::make_DEC(loc);
+<math>\"Divide\"                  return yy::parser::make_DIV(loc);
+<math>\"Mod\"                     return yy::parser::make_MOD(loc);
+<math>\"Multiply\"                return yy::parser::make_MUL(loc);
+<math>\"Log10\"                   return yy::parser::make_LOG(loc);
+<math>\"And\"                     return yy::parser::make_AND(loc);
+<math>\"Or\"                      return yy::parser::make_OR(loc);
+<math>\"Not\"                     return yy::parser::make_NOT(loc);
+<math>\"FlagIsSet\"               return yy::parser::make_FLAGSET(loc);
+<math>\"FlagIsNotSet\"            return yy::parser::make_FLAGCLEAR(loc);
+<math>\"HasNotRead\"              return yy::parser::make_NOTREAD(loc);
+<math>\"HasRead\"                 return yy::parser::make_HASREAD(loc);
+<math>\"Equals\"                  return yy::parser::make_EQ(loc);
+<math>\"NotEquals\"               return yy::parser::make_NE(loc);
+<math>\"GreaterThan\"             return yy::parser::make_GT(loc);
+<math>\"GreaterThanOrEqualTo\"    return yy::parser::make_GE(loc);
+<math>\"LessThan\"                return yy::parser::make_LT(loc);
+<math>\"LessThanOrEqualTo\"       return yy::parser::make_LE(loc);
 
 \"variables\"       return yy::parser::make_VARIABLES(loc);
 \"buildingBlocks\"  return yy::parser::make_BUILDINGBLOCKS(loc);
@@ -152,3 +188,10 @@ void driver::scan_begin() {
 }
 
 void driver::scan_end() { fclose(yyin); }
+
+void start_math() {
+    yy_push_state(math);
+}
+void end_math() {
+    yy_pop_state();
+}
