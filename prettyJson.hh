@@ -24,6 +24,11 @@ enum PrettyJSON { eNO_WHITESPACE = -1, ePRETTY = 0, eCOMPACT = 1 };
 
 #include <iostream>
 
+#include <boost/interprocess/streams/vectorstream.hpp>
+#include <boost/iostreams/filter/aggregate.hpp>
+
+using vectorstream = boost::interprocess::basic_vectorstream<std::vector<char>>;
+
 #ifndef INDENT_CHAR
 #    define INDENT_CHAR '\t'
 #endif
@@ -103,5 +108,35 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
     }
     __builtin_unreachable();
 }
+
+// JSON pretty-print filter for boost::filtering_ostream
+template <typename Ch, typename Alloc = std::allocator<Ch>>
+class basic_json_filter : public boost::iostreams::aggregate_filter<Ch, Alloc> {
+private:
+    using base_type = boost::iostreams::aggregate_filter<Ch, Alloc>;
+
+public:
+    using char_type = typename base_type::char_type;
+    using category  = typename base_type::category;
+
+    explicit basic_json_filter(PrettyJSON _pretty) : pretty(_pretty) {}
+
+private:
+    using vector_type = typename base_type::vector_type;
+    void do_filter(vector_type const& src, vector_type& dest) final {
+        if (src.empty()) {
+            return;
+        }
+        vectorstream sint;
+        sint.reserve(src.size() * 3 / 2);
+        printJSON(src, sint, pretty);
+        sint.swap_vector(dest);
+    }
+    PrettyJSON const pretty;
+};
+BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
+
+using json_filter  = basic_json_filter<char>;
+using wjson_filter = basic_json_filter<wchar_t>;
 
 #endif // PRETTY_JSON_H

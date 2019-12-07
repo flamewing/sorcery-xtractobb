@@ -31,7 +31,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/interprocess/streams/bufferstream.hpp>
-#include <boost/interprocess/streams/vectorstream.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
@@ -40,7 +39,9 @@
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <boost/serialization/vector.hpp>
 
+#include "fileentry.hh"
 #include "jsont.hh"
 #include "prettyJson.hh"
 
@@ -70,7 +71,6 @@ using boost::iostreams::mapped_file_source;
 using boost::iostreams::zlib_decompressor;
 namespace zlib = boost::iostreams::zlib;
 
-using vectorstream = boost::interprocess::basic_vectorstream<std::vector<char>>;
 using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
 
 // Redefine assert macro to avoid clang-tidy noise.
@@ -81,73 +81,6 @@ using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
                 : __assert_fail(                                               \
                       #expr, __FILE__, __LINE__, __ASSERT_FUNCTION)) // NOLINT
 #endif
-
-// Utility to convert "fancy pointer" to pointer (ported from C++20).
-template <typename T>
-__attribute__((always_inline, const)) inline constexpr T*
-to_address(T* in) noexcept {
-    return in;
-}
-
-template <typename Iter>
-__attribute__((always_inline, pure)) inline constexpr auto to_address(Iter in) {
-    return to_address(in.operator->());
-}
-
-template <typename T>
-inline size_t Read1(T& in) {
-    size_t c = static_cast<unsigned char>(*in++);
-    return c;
-}
-
-template <typename T>
-inline uint32_t Read4(T&& in) {
-    auto ptr{to_address(in)};
-    alignas(alignof(uint32_t)) std::array<uint8_t, sizeof(uint32_t)> buf{};
-    uint32_t                                                         val;
-    std::memcpy(buf.data(), ptr, sizeof(uint32_t));
-    std::memcpy(&val, buf.data(), sizeof(uint32_t));
-    std::advance(in, sizeof(uint32_t));
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return val;
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    return __builtin_bswap32(val);
-#else
-#    error                                                                     \
-        "Byte order is neither little endian nor big endian. Do not know how to proceed."
-    return val;
-#endif
-}
-
-// JSON pretty-print filter for boost::filtering_ostream
-template <typename Ch, typename Alloc = std::allocator<Ch>>
-class basic_json_filter : public aggregate_filter<Ch, Alloc> {
-private:
-    using base_type = aggregate_filter<Ch, Alloc>;
-
-public:
-    using char_type = typename base_type::char_type;
-    using category  = typename base_type::category;
-
-    explicit basic_json_filter(PrettyJSON _pretty) : pretty(_pretty) {}
-
-private:
-    using vector_type = typename base_type::vector_type;
-    void do_filter(vector_type const& src, vector_type& dest) final {
-        if (src.empty()) {
-            return;
-        }
-        vectorstream sint;
-        sint.reserve(src.size() * 3 / 2);
-        printJSON(src, sint, pretty);
-        sint.swap_vector(dest);
-    }
-    PrettyJSON const pretty;
-};
-BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
-
-using json_filter  = basic_json_filter<char>;
-using wjson_filter = basic_json_filter<wchar_t>;
 
 // Sorcery! JSON stitch filter for boost::filtering_ostream
 template <typename Ch, typename Alloc = std::allocator<Ch>>
@@ -272,7 +205,7 @@ enum ErrorCodes {
     eOUTPUT_NO_ACCESS
 };
 
-mapped_file_source readObbFile(path const& obbfile) {
+[[nodiscard]] mapped_file_source readObbFile(path const& obbfile) {
     if (!exists(obbfile)) {
         cerr << "File "sv << obbfile << " does not exist!"sv << endl << endl;
         throw ErrorCodes{eOBB_NOT_FOUND};
@@ -359,30 +292,6 @@ void decodeFile(
     }
 }
 
-struct File_entry {
-    string_view                   fname;
-    string_view                   fdata;
-    bool                          compressed = false;
-    static constexpr const size_t EntrySize  = 20;
-    [[nodiscard]] string_view     name() const noexcept { return fname; }
-    [[nodiscard]] string_view     file() const noexcept { return fdata; }
-    File_entry() noexcept = default;
-    File_entry(string_view::const_iterator it, string_view oggview) noexcept {
-        fname      = getData(it, oggview);
-        fdata      = getData(it, oggview);
-        compressed = fdata.size() != Read4(it);
-    }
-
-private:
-    string_view
-    getData(string_view::const_iterator& it, string_view oggview) const
-        noexcept {
-        unsigned ptr = Read4(it);
-        unsigned len = Read4(it);
-        return oggview.substr(ptr, len);
-    }
-};
-
 extern "C" int main(int argc, char* argv[]);
 
 int main(int argc, char* argv[]) {
@@ -407,9 +316,8 @@ int main(int argc, char* argv[]) {
             return eOBB_CORRUPT;
         }
 
-        // TODO: Main json file should be found from Info.plist file: main json
-        // filename = dict["StoryFilename"sv] + (dict["SorceryPartNumber"sv] ==
-        // "3"sv ? ".json"sv : ".minjson"sv)
+        // TODO: Main json file should be found from Info.plist file:
+        //  main json filename = dict["StoryFilename"sv]
         regex const mainJsonRegex(R"regex(Sorcery\d\.(min)?json)regex"s);
         // TODO: inkcontent filename should be found from main json: inkcontent
         // filename = indexed-content/filename
@@ -434,6 +342,12 @@ int main(int argc, char* argv[]) {
                 inkContent = entries.back();
                 cout << "\33[2K\rFound inkcontent: "sv << fname << endl;
             }
+        }
+        {
+            // Save file table for future reference.
+            ofstream                      file_table(outdir / "FileTable.ser");
+            boost::archive::text_oarchive oa(file_table);
+            oa << entries;
         }
         std::sort(entries.begin(), entries.end(), [](auto& lhs, auto& rhs) {
             return lhs.file().data() < rhs.file().data();

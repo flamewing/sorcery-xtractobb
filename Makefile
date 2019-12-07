@@ -42,10 +42,10 @@ CPPFLAGS :=
 INCFLAGS :=
 ifndef MINGW_PREFIX
 	LDFLAGS  := -Wl,-rpath,/usr/local/lib
-	LIBS     := -lboost_system -lboost_filesystem -lboost_iostreams
+	LIBS     := -lboost_system -lboost_filesystem -lboost_iostreams -lboost_serialization-mt
 else
 	LDFLAGS  := -Wl,-rpath,$(MINGW_PREFIX)/lib
-	LIBS     := -lboost_system-mt -lboost_filesystem-mt -lboost_iostreams-mt
+	LIBS     := -lboost_system-mt -lboost_filesystem-mt -lboost_iostreams-mt -lboost_serialization-mt
 endif
 EXTRACTOBB_LIBS :=
 PRETTYJSON_LIBS :=
