@@ -24,25 +24,33 @@
 #include "endianio.hh"
 #include <string_view>
 
-BOOST_CLASS_IMPLEMENTATION(std::string_view, boost::serialization::primitive_type)
+BOOST_CLASS_IMPLEMENTATION(
+    std::string_view, boost::serialization::primitive_type)
 #ifndef BOOST_NO_STD_WSTRING
-BOOST_CLASS_IMPLEMENTATION(std::wstring_view, boost::serialization::primitive_type)
+BOOST_CLASS_IMPLEMENTATION(
+    std::wstring_view, boost::serialization::primitive_type)
 #endif
 
-struct File_entry {
-    std::string_view              fname;
-    std::string_view              fdata;
-    bool                          compressed = false;
-    static constexpr const size_t EntrySize  = 20;
+struct File_data {
+    uint32_t offset     = 0U;
+    uint32_t fulllength = 0U;
+    uint32_t complength = 0U;
+};
 
-    [[nodiscard]] auto name() const noexcept -> std::string_view {
+template <typename FileDataT>
+struct Basic_File_entry {
+    std::string fname;
+    FileDataT   fdata;
+    bool        compressed = false;
+
+    static constexpr const size_t EntrySize = 20;
+
+    [[nodiscard]] auto name() const noexcept -> std::string const& {
         return fname;
     }
-    [[nodiscard]] auto file() const noexcept -> std::string_view {
-        return fdata;
-    }
-    File_entry() noexcept = default;
-    File_entry(
+    [[nodiscard]] auto file() const noexcept -> FileDataT { return fdata; }
+    Basic_File_entry() noexcept = default;
+    Basic_File_entry(
         std::string_view::const_iterator it,
         std::string_view                 oggview) noexcept {
         fname      = getData(it, oggview);
@@ -55,16 +63,19 @@ private:
     static auto getData(
         std::string_view::const_iterator& it, std::string_view oggview) noexcept
         -> std::string_view {
-        unsigned ptr = Read4(it);
-        unsigned len = Read4(it);
+        uint32_t ptr = Read4(it);
+        uint32_t len = Read4(it);
         return oggview.substr(ptr, len);
     }
     template <class Archive>
-    void serialize(Archive& ar, const unsigned int) {
+    void serialize(Archive& ar, unsigned int const) {
         // Do NOT want to save or read file data (fdata) here
         (ar & fname);
         (ar & compressed);
     }
 };
+
+using XFile_entry = Basic_File_entry<std::string_view>;
+using RFile_entry = Basic_File_entry<File_data>;
 
 #endif

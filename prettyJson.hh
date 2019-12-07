@@ -36,10 +36,11 @@ using vectorstream = boost::interprocess::basic_vectorstream<std::vector<char>>;
 template <typename Src, typename Dst>
 void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
     jsont::Tokenizer reader(data.data(), data.size());
-    size_t           indent             = 0;
-    bool             needValue          = false;
-    jsont::Token     tok                = reader.current();
-    auto             printIndentedValue = [&needValue, &sint, &indent,
+    size_t           indent    = 0;
+    bool             needValue = false;
+    jsont::Token     tok       = reader.current();
+
+    auto printIndentedValue = [&needValue, &sint, &indent,
                                &pretty](auto valuePrinter, bool newNeedValue) {
         if (pretty == ePRETTY && (newNeedValue || !needValue)) {
             sint << std::string(indent, INDENT_CHAR);
@@ -50,15 +51,16 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
     auto printValueRaw = [&sint, &reader]() -> decltype(auto) {
         return sint << reader.dataValue();
     };
-    auto printValueObject = [&sint, &reader, &pretty]() -> decltype(auto) {
-        sint << reader.dataValue() << ':';
+    auto printValueObject = [&printValueRaw, &sint, &reader,
+                             &pretty]() -> decltype(auto) {
+        printValueRaw() << ':';
         if (pretty != eNO_WHITESPACE) {
             sint << ' ';
         }
         return sint;
     };
-    auto lineBreak = [&sint, &tok, &pretty]() {
-        if (tok != jsont::Comma && pretty == ePRETTY) {
+    auto lineBreak = [&indent, &sint, &tok, &pretty]() {
+        if (tok != jsont::Comma && (indent == 0 || pretty == ePRETTY)) {
             sint << '\n';
         }
     };
@@ -76,7 +78,7 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
                 static_cast<uint8_t>(tok) + uint8_t(1));
             tok = reader.next();
             if (tok == next) {
-                sint << reader.dataValue();
+                printValueRaw();
                 break;
             }
             indent++;
@@ -119,22 +121,31 @@ public:
     using char_type = typename base_type::char_type;
     using category  = typename base_type::category;
 
-    explicit basic_json_filter(PrettyJSON _pretty) : pretty(_pretty) {}
+    explicit basic_json_filter(PrettyJSON _pretty, size_t* _length = nullptr)
+        : pretty(_pretty), length(_length) {}
 
 private:
     using vector_type = typename base_type::vector_type;
+    void set_length(size_t value) {
+        if (length != nullptr) {
+            *length = value;
+        }
+    }
     void do_filter(vector_type const& src, vector_type& dest) final {
         if (src.empty()) {
+            set_length(0);
             return;
         }
-        vectorstream sint;
+        vectorstream sint(std::ios::in | std::ios::out | std::ios::binary);
         sint.reserve(src.size() * 3 / 2);
         printJSON(src, sint, pretty);
         sint.swap_vector(dest);
+        set_length(dest.size());
     }
     PrettyJSON const pretty;
+    size_t*          length;
 };
-//NOLINTNEXTLINE(modernize-use-trailing-return-type)
+// NOLINTNEXTLINE(modernize-use-trailing-return-type)
 BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
 
 using json_filter  = basic_json_filter<char>;
