@@ -134,6 +134,7 @@ private:
     }
     PrettyJSON const pretty;
 };
+//NOLINTNEXTLINE(modernize-use-trailing-return-type)
 BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
 
 using json_filter  = basic_json_filter<char>;

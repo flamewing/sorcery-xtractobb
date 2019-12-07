@@ -36,7 +36,7 @@
 
 driver::driver(std::ostream& out_) : out(out_) {}
 
-int driver::parse(const std::string& f) {
+auto driver::parse(const std::string& f) -> int {
     file = f;
     location.initialize(&file);
     scan_begin();

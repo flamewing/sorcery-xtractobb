@@ -41,10 +41,10 @@ namespace jsont {
         explicit Tokenizer(std::string_view slice) noexcept;
 
         // Read next token
-        Token next() noexcept;
+        auto next() noexcept -> Token;
 
         // Access current token
-        Token current() const noexcept;
+        auto current() const noexcept -> Token;
 
         // Reset the tokenizer, making it possible to reuse this parser so to
         // avoid unnecessary memory allocation and deallocation.
@@ -52,25 +52,25 @@ namespace jsont {
         void reset(std::string_view slice) noexcept;
 
         // True if the current token has a value
-        bool hasValue() const noexcept;
+        auto hasValue() const noexcept -> bool;
 
         // Returns a slice of the input which represents the current value, or
         // nothing (empty etring_view) if the current token has no value (e.g.
         // start of an object).
-        std::string_view dataValue() const noexcept;
+        auto dataValue() const noexcept -> std::string_view;
 
         // Returns a *copy* of the current string value.
-        std::string stringValue() const noexcept;
+        auto stringValue() const noexcept -> std::string;
 
         // Returns the current value as a double-precision floating-point
         // number.
-        double floatValue() const noexcept;
+        auto floatValue() const noexcept -> double;
 
         // Returns the current value as a signed 64-bit integer.
-        int64_t intValue() const noexcept;
+        auto intValue() const noexcept -> int64_t;
 
         // Returns the current value as a boolean
-        bool boolValue() const noexcept;
+        auto boolValue() const noexcept -> bool;
 
         // Error codes
         enum ErrorCode : uint32_t {
@@ -86,36 +86,36 @@ namespace jsont {
         };
 
         // Returns the error code of the last error
-        ErrorCode error() const noexcept;
+        auto error() const noexcept -> ErrorCode;
 
         // Returns a human-readable message for the last error. Never returns
         // NULL.
-        std::string_view errorMessage() const noexcept;
+        auto errorMessage() const noexcept -> std::string_view;
 
         // The byte offset into input where the tokenizer is currently looking.
         // In the event of an error, this will point to the source of the error.
-        size_t inputOffset() const noexcept;
+        auto inputOffset() const noexcept -> size_t;
 
         // Total number of input bytes
-        size_t inputSize() const noexcept;
+        auto inputSize() const noexcept -> size_t;
 
     private:
-        std::string_view translateToken(Token tok) const noexcept;
+        auto translateToken(Token tok) const noexcept -> std::string_view;
 
-        void   skipWS() noexcept;
-        bool   readDigits(size_t digits) noexcept;
-        bool   readFraction() noexcept;
-        bool   readExponent() noexcept;
-        Token  readNumber(char b, size_t token_start) noexcept;
-        Token  readString(char b, size_t token_start) noexcept;
-        Token  readComma() noexcept;
-        Token  readEndBracket(Token token) noexcept;
-        Token  readAtom(std::string_view atom, Token token) noexcept;
-        size_t availableInput() const noexcept;
-        bool   endOfInput() const noexcept;
-        Token  setToken(Token t) noexcept;
-        Token  setError(ErrorCode error) noexcept;
-        void   initConverter() noexcept;
+        void skipWS() noexcept;
+        auto readDigits(size_t digits) noexcept -> bool;
+        auto readFraction() noexcept -> bool;
+        auto readExponent() noexcept -> bool;
+        auto readNumber(char b, size_t token_start) noexcept -> Token;
+        auto readString(char b, size_t token_start) noexcept -> Token;
+        auto readComma() noexcept -> Token;
+        auto readEndBracket(Token token) noexcept -> Token;
+        auto readAtom(std::string_view atom, Token token) noexcept -> Token;
+        auto availableInput() const noexcept -> size_t;
+        auto endOfInput() const noexcept -> bool;
+        auto setToken(Token t) noexcept -> Token;
+        auto setError(ErrorCode error) noexcept -> Token;
+        void initConverter() noexcept;
 
         std::unordered_map<Token, std::string> _convert;
         std::string_view                       _input;
@@ -139,7 +139,7 @@ namespace jsont {
         reset(slice);
     }
 
-    inline Token Tokenizer::current() const noexcept { return _token; }
+    inline auto Tokenizer::current() const noexcept -> Token { return _token; }
 
     inline void Tokenizer::reset(const char* bytes, size_t length) noexcept {
         reset(std::string_view(bytes, length));
@@ -153,46 +153,51 @@ namespace jsont {
         next();
     }
 
-    inline bool Tokenizer::hasValue() const noexcept {
+    inline auto Tokenizer::hasValue() const noexcept -> bool {
         return _token >= Integer && _token <= FieldName;
     }
 
-    inline std::string Tokenizer::stringValue() const noexcept {
+    inline auto Tokenizer::stringValue() const noexcept -> std::string {
         return std::string(dataValue());
     }
 
-    inline bool Tokenizer::boolValue() const noexcept { return _token == True; }
+    inline auto Tokenizer::boolValue() const noexcept -> bool {
+        return _token == True;
+    }
 
-    inline std::string_view Tokenizer::translateToken(Token tok) const
-        noexcept {
+    inline auto Tokenizer::translateToken(Token tok) const noexcept
+        -> std::string_view {
         return _convert.find(tok)->second;
     }
 
-    inline Token Tokenizer::readComma() noexcept {
+    inline auto Tokenizer::readComma() noexcept -> Token {
         if (_token == ObjectStart || _token == ArrayStart || _token == Comma) {
             return setError(UnexpectedComma);
         }
         return setToken(Comma);
     }
 
-    inline Token Tokenizer::readEndBracket(Token token) noexcept {
+    inline auto Tokenizer::readEndBracket(Token token) noexcept -> Token {
         if (_token == Comma) {
             return setError(UnexpectedTrailingComma);
         }
         return setToken(token);
     }
 
-    inline size_t Tokenizer::availableInput() const noexcept {
+    inline auto Tokenizer::availableInput() const noexcept -> size_t {
         return _input.length() - _offset;
     }
 
-    inline bool Tokenizer::endOfInput() const noexcept {
+    inline auto Tokenizer::endOfInput() const noexcept -> bool {
         return _offset == _input.length();
     }
 
-    inline Token Tokenizer::setToken(Token t) noexcept { return _token = t; }
+    inline auto Tokenizer::setToken(Token t) noexcept -> Token {
+        return _token = t;
+    }
 
-    inline Token Tokenizer::setError(Tokenizer::ErrorCode error) noexcept {
+    inline auto Tokenizer::setError(Tokenizer::ErrorCode error) noexcept
+        -> Token {
         _error        = error;
         return _token = Error;
     }
@@ -208,7 +213,7 @@ namespace jsont {
                     {Error, "<<error>>"s},   {Comma, ","s}};
     }
 
-    inline Tokenizer::ErrorCode Tokenizer::error() const noexcept {
+    inline auto Tokenizer::error() const noexcept -> Tokenizer::ErrorCode {
         return _error;
     }
 } // namespace jsont

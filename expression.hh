@@ -31,20 +31,23 @@ public:
     Expression(Expression const&)     = default;
     Expression(Expression&&) noexcept = default;
 
-    Expression& operator=(Expression const&) = default;
-    Expression& operator=(Expression&&) noexcept = default;
+    auto operator=(Expression const&) -> Expression& = default;
+    auto operator=(Expression&&) noexcept -> Expression& = default;
 
-    std::ostream& write(std::ostream& out, bool needParens) const noexcept {
+    auto write(std::ostream& out, bool needParens) const noexcept
+        -> std::ostream& {
         if (needParens && !is_simple()) {
             out << '(';
             return write_impl(out) << ')';
         }
         return write_impl(out);
     }
-    [[nodiscard]] virtual bool is_simple() const noexcept { return true; }
+    [[nodiscard]] virtual auto is_simple() const noexcept -> bool {
+        return true;
+    }
 
 private:
-    virtual std::ostream& write_impl(std::ostream& out) const noexcept {
+    virtual auto write_impl(std::ostream& out) const noexcept -> std::ostream& {
         return out;
     }
 };
@@ -56,7 +59,8 @@ public:
     explicit ContentExpression(std::string text) : content(std::move(text)) {}
 
 protected:
-    std::ostream& write_impl(std::ostream& out) const noexcept override {
+    auto write_impl(std::ostream& out) const noexcept
+        -> std::ostream& override {
         return out << '"' << content << '"';
     }
 
@@ -69,7 +73,8 @@ public:
     explicit DivertExpression(std::string trg) : target(std::move(trg)) {}
 
 private:
-    std::ostream& write_impl(std::ostream& out) const noexcept override {
+    auto write_impl(std::ostream& out) const noexcept
+        -> std::ostream& override {
         return out << "  -> " << target;
     }
     std::string target;
@@ -81,7 +86,8 @@ public:
         : varName(std::move(name)) {}
 
 private:
-    std::ostream& write_impl(std::ostream& out) const noexcept override {
+    auto write_impl(std::ostream& out) const noexcept
+        -> std::ostream& override {
         return out << varName;
     }
     std::string varName;
@@ -93,7 +99,8 @@ public:
         : varName(std::move(name)) {}
 
 private:
-    std::ostream& write_impl(std::ostream& out) const noexcept override {
+    auto write_impl(std::ostream& out) const noexcept
+        -> std::ostream& override {
         return out << varName;
     }
     std::string varName;
@@ -114,7 +121,8 @@ public:
         : oper(kind), expr(std::move(ex)) {}
 
 private:
-    std::ostream& write_impl(std::ostream& out) const noexcept override {
+    auto write_impl(std::ostream& out) const noexcept
+        -> std::ostream& override {
         switch (oper) {
         case UnaryOps::Log10:
             out << "Log10(";
@@ -144,7 +152,8 @@ public:
         : oper(kind), variable(std::move(var)) {}
 
 private:
-    std::ostream& write_impl(std::ostream& out) const noexcept override {
+    auto write_impl(std::ostream& out) const noexcept
+        -> std::ostream& override {
         if (oper == PostfixOps::Increment) {
             return variable.write(out, false) << "++\n";
         }
@@ -176,10 +185,13 @@ public:
         BinaryOps kind, nonstd::polymorphic_value<Expression> ll,
         nonstd::polymorphic_value<Expression> rr)
         : oper(kind), lhs(std::move(ll)), rhs(std::move(rr)) {}
-    [[nodiscard]] bool is_simple() const noexcept override { return false; }
+    [[nodiscard]] auto is_simple() const noexcept -> bool override {
+        return false;
+    }
 
 private:
-    std::ostream& write_impl(std::ostream& out) const noexcept override {
+    auto write_impl(std::ostream& out) const noexcept
+        -> std::ostream& override {
         lhs->write(out, true);
         switch (oper) {
         case BinaryOps::Add:

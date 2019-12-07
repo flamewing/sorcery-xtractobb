@@ -39,7 +39,7 @@ namespace nonstd {
         template <class T>
         struct default_copy {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            T* operator()(const T& t) const { return new T(t); }
+            auto operator()(const T& t) const -> T* { return new T(t); }
         };
 
         template <class T>
@@ -55,13 +55,13 @@ namespace nonstd {
             control_block(control_block const&)     = default;
             control_block(control_block&&) noexcept = default;
 
-            control_block& operator=(control_block const&) = default;
-            control_block& operator=(control_block&&) noexcept = default;
+            auto operator=(control_block const&) -> control_block& = default;
+            auto operator=(control_block&&) noexcept -> control_block& = default;
 
-            [[nodiscard]] virtual std::unique_ptr<control_block>
-            clone() const = 0;
+            [[nodiscard]] virtual auto clone() const
+                -> std::unique_ptr<control_block> = 0;
 
-            virtual T* ptr() = 0;
+            virtual auto ptr() -> T* = 0;
         };
 
         template <class T, class U = T>
@@ -74,12 +74,12 @@ namespace nonstd {
             explicit direct_control_block(Ts&&... ts)
                 : u_(U(std::forward<Ts>(ts)...)) {}
 
-            [[nodiscard]] std::unique_ptr<control_block<T>>
-            clone() const override {
+            [[nodiscard]] auto clone() const
+                -> std::unique_ptr<control_block<T>> override {
                 return std::make_unique<direct_control_block>(*this);
             }
 
-            T* ptr() override { return std::addressof(u_); }
+            auto ptr() -> T* override { return std::addressof(u_); }
         };
 
         template <
@@ -95,7 +95,7 @@ namespace nonstd {
             explicit pointer_control_block(std::unique_ptr<U, D> p, C c = C{})
                 : C(std::move(c)), p_(std::move(p)) {}
 
-            std::unique_ptr<control_block<T>> clone() const override {
+            auto clone() const -> std::unique_ptr<control_block<T>> override {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
                 assert(p_);
                 return std::make_unique<pointer_control_block>(
@@ -103,7 +103,7 @@ namespace nonstd {
                     p_.get_deleter());
             }
 
-            T* ptr() override { return p_.get(); }
+            auto ptr() -> T* override { return p_.get(); }
         };
 
         template <class T, class U>
@@ -115,12 +115,12 @@ namespace nonstd {
                 std::unique_ptr<control_block<U>> b)
                 : delegate_(std::move(b)) {}
 
-            std::unique_ptr<control_block<T>> clone() const override {
+            auto clone() const -> std::unique_ptr<control_block<T>> override {
                 return std::make_unique<delegating_control_block>(
                     delegate_->clone());
             }
 
-            T* ptr() override { return delegate_->ptr(); }
+            auto ptr() -> T* override { return delegate_->ptr(); }
         };
 
     } // end namespace detail
@@ -129,7 +129,7 @@ namespace nonstd {
     public:
         bad_polymorphic_value_construction() noexcept = default;
 
-        [[nodiscard]] const char* what() const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> const char* override {
             return "Dynamic and static type mismatch in polymorphic_value "
                    "construction";
         }
@@ -162,10 +162,10 @@ namespace nonstd {
 
         template <class T_, class U, class... Ts>
         // NOLINTNEXTLINE(readability-redundant-declaration)
-        friend polymorphic_value<T_> make_polymorphic_value(Ts&&... ts);
+        friend auto make_polymorphic_value(Ts&&... ts) -> polymorphic_value<T_>;
         template <class T_, class... Ts>
         // NOLINTNEXTLINE(readability-redundant-declaration)
-        friend polymorphic_value<T_> make_polymorphic_value(Ts&&... ts);
+        friend auto make_polymorphic_value(Ts&&... ts) -> polymorphic_value<T_>;
 
         T* ptr_ = nullptr;
 
@@ -273,7 +273,7 @@ namespace nonstd {
         // Assignment
         //
 
-        polymorphic_value& operator=(const polymorphic_value& p) {
+        auto operator=(const polymorphic_value& p) -> polymorphic_value& {
             if (std::addressof(p) == this) {
                 return *this;
             }
@@ -294,7 +294,7 @@ namespace nonstd {
         // Move-assignment
         //
 
-        polymorphic_value& operator=(polymorphic_value&& p) noexcept {
+        auto operator=(polymorphic_value&& p) noexcept -> polymorphic_value& {
             if (std::addressof(p) == this) {
                 return *this;
             }
@@ -321,25 +321,25 @@ namespace nonstd {
 
         explicit operator bool() const { return static_cast<bool>(cb_); }
 
-        __attribute__((pure)) const T* operator->() const {
+        __attribute__((pure)) auto operator-> () const -> const T* {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
             assert(ptr_);
             return ptr_;
         }
 
-        __attribute__((pure)) const T& operator*() const {
+        __attribute__((pure)) auto operator*() const -> const T& {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
             assert(*this);
             return *ptr_;
         }
 
-        __attribute__((pure)) T* operator->() {
+        __attribute__((pure)) auto operator-> () -> T* {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
             assert(*this);
             return ptr_;
         }
 
-        __attribute__((pure)) T& operator*() {
+        __attribute__((pure)) auto operator*() -> T& {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
             assert(*this);
             return *ptr_;
@@ -350,7 +350,7 @@ namespace nonstd {
     // polymorphic_value creation
     //
     template <class T, class... Ts>
-    polymorphic_value<T> make_polymorphic_value(Ts&&... ts) {
+    auto make_polymorphic_value(Ts&&... ts) -> polymorphic_value<T> {
         polymorphic_value<T> p;
         p.cb_ = std::make_unique<detail::direct_control_block<T, T>>(
             std::forward<Ts>(ts)...);
@@ -358,7 +358,7 @@ namespace nonstd {
         return std::move(p);
     }
     template <class T, class U, class... Ts>
-    polymorphic_value<T> make_polymorphic_value(Ts&&... ts) {
+    auto make_polymorphic_value(Ts&&... ts) -> polymorphic_value<T> {
         polymorphic_value<T> p;
         p.cb_ = std::make_unique<detail::direct_control_block<T, U>>(
             std::forward<Ts>(ts)...);

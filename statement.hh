@@ -39,22 +39,25 @@ public:
     Statement(Statement const&)     = default;
     Statement(Statement&&) noexcept = default;
 
-    Statement& operator=(Statement const&) = default;
-    Statement& operator=(Statement&&) noexcept = default;
+    auto operator=(Statement const&) -> Statement& = default;
+    auto operator=(Statement&&) noexcept -> Statement& = default;
 
-    std::ostream& write(std::ostream& out, size_t indent) const noexcept {
+    auto write(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& {
         return write_impl(out, indent);
     }
-    [[nodiscard]] std::string getIndent(size_t indent) const {
+    [[nodiscard]] static auto getIndent(size_t indent) -> std::string {
         return std::string(indent, ' ');
     }
 
 private:
-    [[nodiscard]] virtual bool is_simple() const noexcept { return true; }
+    [[nodiscard]] virtual auto is_simple() const noexcept -> bool {
+        return true;
+    }
 
 protected:
-    virtual std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept {
+    virtual auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& {
         ignore_unused_variable_warning(indent);
         return out;
     }
@@ -67,8 +70,8 @@ public:
     explicit ContentStatement(std::string text) : content(std::move(text)) {}
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept override {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& override {
         return out << getIndent(indent) << content << '\n';
     }
 
@@ -85,8 +88,8 @@ public:
         : content(std::move(text)), condition(std::move(cond)) {}
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept override {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& override {
         out << getIndent(indent) << "* ";
         if (condition) {
             out << "{ ";
@@ -109,8 +112,8 @@ public:
     }
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept override {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& override {
         out << getIndent(indent) << "~ ";
         if (declare) {
             out << "temp ";
@@ -133,8 +136,8 @@ public:
         : expression(std::move(expr)) {}
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept override {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& override {
         out << getIndent(indent) << "~ ";
         return expression->write(out, false) << '\n';
     }
@@ -151,8 +154,8 @@ public:
         : expression(std::move(expr)) {}
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept override {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& override {
         out << getIndent(indent) << "~ return ";
         return expression->write(out, false) << '\n';
     }
@@ -173,11 +176,11 @@ public:
     void steal_statements(StatementList& other) noexcept {
         statements.swap(other);
     }
-    StatementList& get_statements() noexcept { return statements; }
+    auto get_statements() noexcept -> StatementList& { return statements; }
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept override {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& override {
         for (auto const& elem : statements) {
             elem->write(out, indent);
         }
@@ -194,8 +197,8 @@ public:
     ElseStatement() = default;
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept override {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& override {
         out << getIndent(indent) << "- else:\n";
         return BlockStatement::write_impl(out, indent + 4);
     }
@@ -217,8 +220,8 @@ public:
           elseStmt(std::move(else_)) {}
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept override {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& override {
         out << getIndent(indent) << "- ";
         condExpr->write(out, false) << "\n";
         thenStmt->write(out, indent + 4);
@@ -243,10 +246,10 @@ public:
         add_global(varName);
     }
 
-    static bool add_global(std::string var) {
+    static auto add_global(std::string var) -> bool {
         return variables.insert(std::move(var)).second;
     }
-    static bool is_global(const std::string& var) {
+    static auto is_global(const std::string& var) -> bool {
         return variables.find(var) != variables.cend();
     }
 
@@ -255,8 +258,8 @@ private:
     static inline std::set<std::string> variables;
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept final {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& final {
         ignore_unused_variable_warning(indent);
         return out << "VAR " << varName << " = " << varValue << '\n';
     }
@@ -272,8 +275,10 @@ public:
     TopLevelStatement() noexcept = default;
     TopLevelStatement(std::string name_, driver& drv_)
         : drv(&drv_), name(std::move(name_)) {}
-    [[nodiscard]] std::string const& getName() const noexcept { return name; }
-    [[nodiscard]] bool has_variable(std::string const& var) const {
+    [[nodiscard]] auto getName() const noexcept -> std::string const& {
+        return name;
+    }
+    [[nodiscard]] auto has_variable(std::string const& var) const -> bool {
         return headerVariables.find(var) != headerVariables.cend();
     }
     void add_variable(std::string const& var, bool ref) {
@@ -285,7 +290,7 @@ protected:
         drv  = &drv_;
         name = std::move(name_);
     }
-    std::ostream& write_header_base(std::ostream& out) const noexcept {
+    auto write_header_base(std::ostream& out) const noexcept -> std::ostream& {
         out << name;
         if (!headerVariables.empty()) {
             out << '(';
@@ -304,12 +309,13 @@ protected:
         }
         return out;
     }
-    virtual std::ostream& write_header(std::ostream& out) const noexcept {
+    virtual auto write_header(std::ostream& out) const noexcept
+        -> std::ostream& {
         return out;
     }
 
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept override {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& override {
         write_header(out);
         return BlockStatement::write_impl(out, indent) << '\n';
     }
@@ -329,7 +335,7 @@ public:
     }
 
 private:
-    std::ostream& write_header(std::ostream& out) const noexcept final {
+    auto write_header(std::ostream& out) const noexcept -> std::ostream& final {
         out << "= ";
         return write_header_base(out) << '\n';
     }
@@ -350,14 +356,14 @@ public:
     }
 
 private:
-    std::ostream& write_header(std::ostream& out) const noexcept final {
+    auto write_header(std::ostream& out) const noexcept -> std::ostream& final {
         out << "=== ";
         return write_header_base(out) << " ===\n";
     }
 
 protected:
-    std::ostream& write_impl(std::ostream& out, size_t indent) const
-        noexcept final {
+    auto write_impl(std::ostream& out, size_t indent) const noexcept
+        -> std::ostream& final {
         write_header(out);
         TopLevelStatement::write_impl(out, indent) << '\n';
         for (auto const& elem : stitches) {
@@ -379,7 +385,7 @@ public:
     }
 
 private:
-    std::ostream& write_header(std::ostream& out) const noexcept final {
+    auto write_header(std::ostream& out) const noexcept -> std::ostream& final {
         out << "=== function ";
         return write_header_base(out) << " ===\n";
     }

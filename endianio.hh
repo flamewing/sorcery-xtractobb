@@ -25,8 +25,8 @@
 
 // Utility to convert "fancy pointer" to pointer (ported from C++20).
 template <typename T>
-__attribute__((always_inline, const)) inline constexpr T*
-to_address(T* in) noexcept {
+__attribute__((always_inline, const)) inline constexpr auto
+to_address(T* in) noexcept -> T* {
     return in;
 }
 
@@ -36,7 +36,7 @@ __attribute__((always_inline, pure)) inline constexpr auto to_address(Iter in) {
 }
 
 template <typename T>
-__attribute__((always_inline)) inline uint32_t Read4(T&& in) {
+__attribute__((always_inline)) inline auto Read4(T&& in) -> uint32_t {
     auto ptr{to_address(in)};
     alignas(alignof(uint32_t)) std::array<uint8_t, sizeof(uint32_t)> buf{};
     uint32_t                                                         val;

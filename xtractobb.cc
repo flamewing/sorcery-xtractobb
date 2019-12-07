@@ -188,6 +188,7 @@ private:
     }
     string_view const inkContent;
 };
+//NOLINTNEXTLINE(modernize-use-trailing-return-type)
 BOOST_IOSTREAMS_PIPABLE(basic_json_stitch_filter, 2)
 
 using json_stitch_filter  = basic_json_stitch_filter<char>;
@@ -205,7 +206,7 @@ enum ErrorCodes {
     eOUTPUT_NO_ACCESS
 };
 
-[[nodiscard]] mapped_file_source readObbFile(path const& obbfile) {
+[[nodiscard]] auto readObbFile(path const& obbfile) -> mapped_file_source {
     if (!exists(obbfile)) {
         cerr << "File "sv << obbfile << " does not exist!"sv << endl << endl;
         throw ErrorCodes{eOBB_NOT_FOUND};
@@ -292,9 +293,9 @@ void decodeFile(
     }
 }
 
-extern "C" int main(int argc, char* argv[]);
+extern "C" auto main(int argc, char* argv[]) -> int;
 
-int main(int argc, char* argv[]) {
+auto main(int argc, char* argv[]) -> int {
     try {
         if (argc != 3) {
             cerr << "Usage: "sv << argv[0] << " inputfile outputdir"sv << endl

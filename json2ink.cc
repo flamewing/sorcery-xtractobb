@@ -47,9 +47,9 @@ void usage(ostream& out, string_view const program) {
            "\tinput-reference \tThis is the SorceryN-reference.json file.\n\n"sv;
 }
 
-extern "C" int main(int argc, char* argv[]);
+extern "C" auto main(int argc, char* argv[]) -> int;
 
-int main(int argc, char* argv[]) {
+auto main(int argc, char* argv[]) -> int {
     string_view const program(argv[0]);
     if (argc != 2) {
         usage(cerr, program);

@@ -41,7 +41,7 @@
 #pragma GCC diagnostic pop
 
 // Give Flex the prototype of yylex we want ...
-#define YY_DECL yy::parser::symbol_type yylex(driver& drv)
+#define YY_DECL auto yylex(driver& drv) -> yy::parser::symbol_type
 // ... and declare it for the parser's sake.
 YY_DECL;
 
@@ -52,7 +52,7 @@ class driver {
 public:
     explicit driver(std::ostream& out);
     // Run the parser on file F.  Return 0 on success.
-    int parse(const std::string& f);
+    auto parse(const std::string& f) -> int;
     // Handling the scanner.
     void scan_begin();
     void scan_end();

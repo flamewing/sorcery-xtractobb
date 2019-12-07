@@ -19,20 +19,21 @@ using std::strtoll;
 using namespace std::literals::string_view_literals;
 
 namespace jsont {
-    static inline bool safe_isalnum(const char c) {
+    static inline auto safe_isalnum(const char c) -> bool {
         return isalnum(static_cast<unsigned char>(c)) != 0;
     }
-    static inline bool safe_isdigit(const char c) {
+    static inline auto safe_isdigit(const char c) -> bool {
         return isdigit(static_cast<unsigned char>(c)) != 0;
     }
-    static inline bool is_plus_minus(const char c) {
+    static inline auto is_plus_minus(const char c) -> bool {
         return c == '+' || c == '-';
     }
-    static inline bool is_exponent_introducer(const char c) {
+    static inline auto is_exponent_introducer(const char c) -> bool {
         return c == 'E' || c == 'e';
     }
 
-    inline Token Tokenizer::readAtom(string_view atom, Token token) noexcept {
+    inline auto Tokenizer::readAtom(string_view atom, Token token) noexcept
+        -> Token {
         if (availableInput() < atom.length()) {
             return setError(Tokenizer::PrematureEndOfInput);
         }
@@ -47,7 +48,8 @@ namespace jsont {
         return setToken(token);
     }
 
-    __attribute__((pure)) string_view Tokenizer::errorMessage() const noexcept {
+    __attribute__((pure)) auto Tokenizer::errorMessage() const noexcept
+        -> string_view {
         switch (_error) {
         case UnexpectedComma:
             return "Unexpected comma"sv;
@@ -71,14 +73,14 @@ namespace jsont {
         return "Unspecified error"sv;
     }
 
-    string_view Tokenizer::dataValue() const noexcept {
+    auto Tokenizer::dataValue() const noexcept -> string_view {
         if (!hasValue()) {
             return translateToken(_token);
         }
         return _value;
     }
 
-    double Tokenizer::floatValue() const noexcept {
+    auto Tokenizer::floatValue() const noexcept -> double {
         if (!hasValue()) {
             return _token == jsont::True ? 1.0 : 0.0;
         }
@@ -94,7 +96,7 @@ namespace jsont {
         return strtod(_value.data(), nullptr);
     }
 
-    int64_t Tokenizer::intValue() const noexcept {
+    auto Tokenizer::intValue() const noexcept -> int64_t {
         if (!hasValue()) {
             return _token == jsont::True ? 1LL : 0LL;
         }
@@ -129,7 +131,7 @@ namespace jsont {
         }
     }
 
-    inline bool Tokenizer::readDigits(size_t digits) noexcept {
+    inline auto Tokenizer::readDigits(size_t digits) noexcept -> bool {
         while (!endOfInput() && safe_isdigit(_input[_offset++])) {
             digits++;
         }
@@ -141,7 +143,7 @@ namespace jsont {
         return digits > 0;
     }
 
-    inline bool Tokenizer::readFraction() noexcept {
+    inline auto Tokenizer::readFraction() noexcept -> bool {
         if (endOfInput() || _input[_offset] != '.') {
             return true;
         }
@@ -151,7 +153,7 @@ namespace jsont {
         return readDigits(0);
     }
 
-    inline bool Tokenizer::readExponent() noexcept {
+    inline auto Tokenizer::readExponent() noexcept -> bool {
         if (endOfInput() || !is_exponent_introducer(_input[_offset])) {
             return true;
         }
@@ -165,7 +167,8 @@ namespace jsont {
         return readDigits(0);
     }
 
-    inline Token Tokenizer::readNumber(char b, size_t token_start) noexcept {
+    inline auto Tokenizer::readNumber(char b, size_t token_start) noexcept
+        -> Token {
         bool have_digit = safe_isdigit(b);
         if (!have_digit && b != '-') {
             return setError(InvalidByte);
@@ -182,7 +185,7 @@ namespace jsont {
         return current();
     }
 
-    Token Tokenizer::readString(char b, size_t token_start) noexcept {
+    auto Tokenizer::readString(char b, size_t token_start) noexcept -> Token {
         while (!endOfInput()) {
             b = _input[_offset++];
 
@@ -226,7 +229,7 @@ namespace jsont {
         return setToken(jsont::String);
     }
 
-    Token Tokenizer::next() noexcept {
+    auto Tokenizer::next() noexcept -> Token {
         //
         // { } [ ] n t f "
         //         | | | |

@@ -24,13 +24,23 @@
 #include "endianio.hh"
 #include <string_view>
 
+BOOST_CLASS_IMPLEMENTATION(std::string_view, boost::serialization::primitive_type)
+#ifndef BOOST_NO_STD_WSTRING
+BOOST_CLASS_IMPLEMENTATION(std::wstring_view, boost::serialization::primitive_type)
+#endif
+
 struct File_entry {
     std::string_view              fname;
     std::string_view              fdata;
     bool                          compressed = false;
     static constexpr const size_t EntrySize  = 20;
-    [[nodiscard]] std::string_view name() const noexcept { return fname; }
-    [[nodiscard]] std::string_view file() const noexcept { return fdata; }
+
+    [[nodiscard]] auto name() const noexcept -> std::string_view {
+        return fname;
+    }
+    [[nodiscard]] auto file() const noexcept -> std::string_view {
+        return fdata;
+    }
     File_entry() noexcept = default;
     File_entry(
         std::string_view::const_iterator it,
@@ -42,9 +52,9 @@ struct File_entry {
 
 private:
     friend class boost::serialization::access;
-    std::string_view getData(
-        std::string_view::const_iterator& it, std::string_view oggview) const
-        noexcept {
+    static auto getData(
+        std::string_view::const_iterator& it, std::string_view oggview) noexcept
+        -> std::string_view {
         unsigned ptr = Read4(it);
         unsigned len = Read4(it);
         return oggview.substr(ptr, len);
