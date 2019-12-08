@@ -49,7 +49,7 @@ script:
   - if [ -e cov-int/build-log.txt ] ; then cat cov-int/build-log.txt; fi
 
 notifications:
-  email: true
-  on_success: change
-  on_failure: always
+  email:
+    on_success: change
+    on_failure: always
 
