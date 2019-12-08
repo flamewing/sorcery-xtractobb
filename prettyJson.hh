@@ -32,12 +32,13 @@ using vectorstream = boost::interprocess::basic_vectorstream<std::vector<char>>;
 #    define INDENT_CHAR '\t'
 #endif
 
-template <typename Src, typename Dst>
-void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
-    jsont::Tokenizer reader(data.data(), data.size());
-    size_t           indent    = 0;
-    bool             needValue = false;
-    jsont::Token     tok       = reader.current();
+template <typename Dst>
+void printJSON(
+        jsont::Tokenizer& reader, Dst& sint, PrettyJSON const pretty,
+        size_t newlineForceIndent) {
+    size_t       indent    = 0;
+    bool         needValue = false;
+    jsont::Token tok       = reader.current();
 
     auto printIndentedValue = [&needValue, &sint, &indent,
                                &pretty](auto valuePrinter, bool newNeedValue) {
@@ -58,8 +59,9 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
         }
         return sint;
     };
-    auto lineBreak = [&indent, &sint, &tok, &pretty]() {
-        if (tok != jsont::Comma && (indent == 0 || pretty == ePRETTY)) {
+    auto lineBreak = [&indent, &sint, &tok, &pretty, &newlineForceIndent]() {
+        if (tok != jsont::Comma
+            && (indent == newlineForceIndent || pretty == ePRETTY)) {
             sint << '\n';
         }
     };
@@ -86,6 +88,9 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
         }
         case jsont::ObjectEnd:
         case jsont::ArrayEnd:
+            if (indent == 0) {
+                return;
+            }
             --indent;
             [[fallthrough]];
         case jsont::True:
@@ -108,6 +113,12 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
         lineBreak();
     }
     __builtin_unreachable();
+}
+
+template <typename Src, typename Dst>
+void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
+    jsont::Tokenizer reader(data.data(), data.size());
+    printJSON(reader, sint, pretty, 0U);
 }
 
 // JSON pretty-print filter for boost::filtering_ostream

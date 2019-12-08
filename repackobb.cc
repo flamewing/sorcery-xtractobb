@@ -102,78 +102,77 @@ public:
     using char_type = typename base_type::char_type;
     using category  = typename base_type::category;
 
-    // TODO: Filter should receive output directory instead.
-    explicit basic_json_unstitch_filter(string_view const _inkContent)
-            : inkContent(_inkContent) {}
+    explicit basic_json_unstitch_filter(
+            filtering_ostream& _inkContent, string _inkFileName)
+            : inkContent(_inkContent)
+            , inkFileName(std::move(_inkFileName)) {}
 
 private:
-    decltype(auto) printValueRaw(vectorstream& sint, jsont::Tokenizer& reader) {
+    decltype(auto) printValueRaw(ostream& sint, jsont::Tokenizer& reader) {
         return sint << reader.dataValue();
     }
 
-    decltype(auto)
-            printValueObject(vectorstream& sint, jsont::Tokenizer& reader) {
+    decltype(auto) printValueObject(ostream& sint, jsont::Tokenizer& reader) {
         return sint << reader.dataValue() << ':';
     }
 
     void handleObjectOrStitch(vectorstream& sint, jsont::Tokenizer& reader) {
-        if (reader.dataValue() != R"("indexed-content")"sv) {
+        if (reader.dataValue() != R"("stitches")"sv) {
             printValueObject(sint, reader);
             return;
         }
-        sint << R"("stitches":)"sv;
+        // Temporary storage for stitches, so we can get the offset and length
+        // for the story file.
+        stringstream stitches(ios::in | ios::out | ios::binary);
+        auto         curr_position = stitches.tellp();
+        sint << R"("indexed-content":)"sv;
         jsont::Token tok = reader.next();
         assert(tok == jsont::ObjectStart);
         printValueRaw(sint, reader);
+        sint << R"("filename":")"sv << inkFileName << R"(","ranges":{)";
         tok = reader.next();
         while (tok != jsont::ObjectEnd) {
             assert(tok == jsont::FieldName);
-            if (reader.dataValue() == R"("filename")"sv) {
-                // TODO: instead of being discarded, this should be used with
-                // output directoty to open stitch source file
-                tok = reader.next();    // Fetch filename...
-                assert(tok == jsont::String);
-                tok = reader.next();    // ... and discard it
-                assert(tok == jsont::Comma);
-                tok = reader.next();    // Discard comma after it as well
-            } else if (reader.dataValue() == R"("ranges")"sv) {
-                // The meat.
+            curr_position = stitches.tellp();
+            printValueObject(sint, reader)
+                    << '"' << uint32_t(curr_position) << ' ';
+            tok = reader.next();
+            assert(tok == jsont::ObjectStart);
+            // Handle "content" arrays seperately.
+            tok = reader.next();
+            if (tok == jsont::FieldName
+                && reader.dataValue() == R"("content")"sv) {
                 tok = reader.next();
-                assert(tok == jsont::ObjectStart);
-                tok = reader.next();
-                while (tok != jsont::ObjectEnd) {
-                    assert(tok == jsont::FieldName);
-                    printValueObject(sint, reader);
-                    tok = reader.next();
-                    assert(tok == jsont::String);
-                    string_view slice = reader.dataValue();
-                    // Remove starting double-quotes
-                    slice.remove_prefix(1);
-                    ibufferstream sptr(
-                            slice.data(), slice.length(),
-                            ios::in | ios::binary);
-                    unsigned offset;
-                    unsigned length;
-                    sptr >> offset >> length;
-                    string_view stitch(inkContent.substr(offset, length));
-
-                    if (stitch[0] == '[') {
-                        sint << R"({"content":)"sv << stitch << '}';
-                    } else {
-                        sint << stitch;
-                    }
-                    tok = reader.next();
-                    if (tok == jsont::Comma) {
-                        printValueRaw(sint, reader);
-                        tok = reader.next();
-                    }
-                }
+                assert(tok == jsont::ArrayStart);
+                printJSON(reader, stitches, eNO_WHITESPACE, ~0U);
+                tok = reader.current();
                 assert(tok == jsont::ObjectEnd);
+                stitches << '\n';
+            } else {
+                // We have an object on the ink file.
+                // Need to print the open curly brace.
+                stitches << '{';
+                printJSON(reader, stitches, eNO_WHITESPACE, ~0U);
+                tok = reader.current();
+                assert(tok == jsont::ObjectEnd);
+                stitches << "}\n";
+            }
+            auto end_position = stitches.tellp();
+            sint << uint32_t(end_position - curr_position) << '"';
+            tok = reader.next();
+            if (tok == jsont::Comma) {
+                printValueRaw(sint, reader);
                 tok = reader.next();
             }
         }
+        // This closes the "ranges" object.
         assert(tok == jsont::ObjectEnd);
         printValueRaw(sint, reader);
+        // This closes the "indexed-content" object.
+        printValueRaw(sint, reader);
+        // Write out inkcontent file.
+        stitches.seekg(0);
+        inkContent << stitches.rdbuf();
     }
 
     void do_filter(vector_type const& src, vector_type& dest) final {
@@ -197,7 +196,8 @@ private:
         }
         __builtin_unreachable();
     }
-    string_view const inkContent;
+    filtering_ostream& inkContent;
+    string             inkFileName;
 };
 // NOLINTNEXTLINE(modernize-use-trailing-return-type)
 BOOST_IOSTREAMS_PIPABLE(basic_json_unstitch_filter, 2)
@@ -366,6 +366,42 @@ auto encodeFile(ofstream& obbContents, path const& infile, bool compressed)
     return {fulllength, complength, padding};
 }
 
+auto writeJSON(
+        path const& fpath, ofstream& fout, filtering_ostream& fsout,
+        json_unstitch_filter* fsink) {
+    fout.open(fpath, ios::in | ios::binary);
+    if (!fout.good()) {
+        cerr << "Could not create file "sv << fpath << endl << endl;
+        throw ErrorCodes{eINPUT_NO_ACCESS};
+    }
+    if (fsink != nullptr) {
+        fsout.push(*fsink);
+    }
+    fsout.push(json_filter(ePRETTY));
+    fsout.push(fout);
+}
+
+void unpackReferenceFile(
+        path const& indir, string const& referenceFile,
+        string const& mainJsonFile, string const& inkcontentFile) {
+    cout << "\33[2K\rRe-generating "sv << inkcontentFile << " and "sv
+         << mainJsonFile << " from reference file "sv << referenceFile
+         << "... "sv << flush;
+    ofstream          inkfile;
+    filtering_ostream fsinkfile;
+    writeJSON(indir / inkcontentFile, inkfile, fsinkfile, nullptr);
+
+    ofstream             mainfile;
+    filtering_ostream    fsmainfile;
+    json_unstitch_filter filter(fsinkfile, inkcontentFile);
+    writeJSON(indir / mainJsonFile, mainfile, fsmainfile, &filter);
+
+    ifstream reffile(indir / referenceFile, ios::in | ios::binary);
+
+    fsmainfile << reffile.rdbuf();
+    cout << "done."sv << flush;
+}
+
 extern "C" auto main(int argc, char* argv[]) -> int;
 
 auto main(int argc, char* argv[]) -> int {
@@ -377,7 +413,7 @@ auto main(int argc, char* argv[]) -> int {
         }
 
         path const indir(argv[1]);
-        auto [entries, referenceFile, inkcontentFile, mainJsonFile]
+        auto [entries, referenceFile, mainJsonFile, inkcontentFile]
                 = readInputDir(indir);
 
         path const obbfile(argv[2]);
@@ -390,9 +426,7 @@ auto main(int argc, char* argv[]) -> int {
         Write4(obbcontents, 0U);    // Placeholder for file table position
         curr_offset += 8;
 
-        // TODO: Regenerate story and inkcontent from reference file
-
-        RFile_entry inkContent;
+        unpackReferenceFile(indir, referenceFile, mainJsonFile, inkcontentFile);
 
         for (auto& elem : entries) {
             cout << "\33[2K\rPacking file "sv << elem.name() << flush;
