@@ -297,7 +297,7 @@ void checkFile(path const& fpath) {
 
     string referenceFileName;
     string mainJsonFileName;
-    string inkconentFileName;
+    string inkContentFileName;
 
     for (auto& entry : entries) {
         checkFile(indir / entry.name());
@@ -308,10 +308,10 @@ void checkFile(path const& fpath) {
             mainJsonFileName = fname;
             checkFile(indir / referenceFileName);
         } else if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
-            inkconentFileName = fname;
+            inkContentFileName = fname;
         }
     }
-    return {entries, referenceFileName, mainJsonFileName, inkconentFileName};
+    return {entries, referenceFileName, mainJsonFileName, inkContentFileName};
 }
 
 inline auto roundUp(uint32_t numToRound, uint32_t multiple) -> uint32_t {
