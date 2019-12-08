@@ -31,3 +31,6 @@ stack.hh
 # Test temporaries
 tests/input/*
 
+# Editor
+.clangd
+
