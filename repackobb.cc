@@ -454,6 +454,11 @@ auto main(int argc, char* argv[]) -> int {
         obbcontents.write(nullPadding.data(), padding);
         curr_offset += padding;
 
+        // File table is sorted by name.
+        sort(entries.begin(), entries.end(), [](auto& lhs, auto& rhs) {
+            return lhs.name() < rhs.name();
+        });
+
         cout << "\33[2K\rCreating file table... "sv << flush;
         uint32_t file_table_pos = curr_offset;
         for (auto& elem : entries) {
@@ -462,8 +467,8 @@ auto main(int argc, char* argv[]) -> int {
             Write4(obbcontents, fname.size());
             File_data const& fdata = elem.fdata;
             Write4(obbcontents, fdata.offset);
-            Write4(obbcontents, fdata.fulllength);
             Write4(obbcontents, fdata.complength);
+            Write4(obbcontents, fdata.fulllength);
             curr_offset += 20;
         }
 

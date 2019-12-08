@@ -348,15 +348,17 @@ auto main(int argc, char* argv[]) -> int {
                 cout << "\33[2K\rFound inkcontent: "sv << fname << endl;
             }
         }
+
+        // Sort by data order in file, to improve OS prefetching.
+        sort(entries.begin(), entries.end(), [](auto& lhs, auto& rhs) {
+            return lhs.file().data() < rhs.file().data();
+        });
         {
             // Save file table for future reference.
             ofstream      file_table(outdir / "FileTable.ser");
             text_oarchive oa(file_table);
             oa << entries;
         }
-        sort(entries.begin(), entries.end(), [](auto& lhs, auto& rhs) {
-            return lhs.file().data() < rhs.file().data();
-        });
 
         zlib_decompressor unzip(zlib::default_window_bits, 1 * 1024 * 1024);
 
