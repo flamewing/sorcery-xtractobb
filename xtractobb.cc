@@ -47,6 +47,7 @@
 using std::allocator;
 using std::cerr;
 using std::cout;
+using std::exception;
 using std::endl;
 using std::flush;
 using std::ios;
@@ -84,7 +85,7 @@ using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
 #endif
 
 // Sorcery! JSON stitch filter for boost::filtering_ostream
-template <typename Ch, typename Alloc = std::allocator<Ch>>
+template <typename Ch, typename Alloc = allocator<Ch>>
 class basic_json_stitch_filter : public aggregate_filter<Ch, Alloc> {
 private:
     using base_type   = aggregate_filter<Ch, Alloc>;
@@ -321,10 +322,10 @@ auto main(int argc, char* argv[]) -> int {
         }
 
         // TODO: Main json file should be found from Info.plist file:
-        //  main json filename = dict["StoryFilename"sv]
+        //  main json filename = dict["StoryFilename"sv] + ".json"
         regex const mainJsonRegex(R"regex(Sorcery\d\.(min)?json)regex"s);
-        // TODO: inkcontent filename should be found from main json: inkcontent
-        // filename = indexed-content/filename
+        // TODO: inkcontent filename should be found from main json:
+        // inkcontent filename = indexed-content/filename
         regex const inkContentRegex(R"regex(Sorcery\d\.inkcontent)regex"s);
 
         XFile_entry         mainJson;
@@ -353,7 +354,7 @@ auto main(int argc, char* argv[]) -> int {
             text_oarchive oa(file_table);
             oa << entries;
         }
-        std::sort(entries.begin(), entries.end(), [](auto& lhs, auto& rhs) {
+        sort(entries.begin(), entries.end(), [](auto& lhs, auto& rhs) {
             return lhs.file().data() < rhs.file().data();
         });
 
@@ -377,7 +378,7 @@ auto main(int argc, char* argv[]) -> int {
                     mainJson.compressed, true);
         }
         cout << endl;
-    } catch (std::exception const& except) {
+    } catch (exception const& except) {
         cerr << except.what() << endl;
     } catch (ErrorCodes err) {
         return err;

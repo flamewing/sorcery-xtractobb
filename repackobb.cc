@@ -46,21 +46,24 @@
 #include <unordered_map>
 #include <vector>
 
-
 using std::allocator;
 using std::array;
 using std::cerr;
 using std::cout;
 using std::endl;
+using std::exception;
 using std::flush;
 using std::ios;
 using std::istream;
+using std::numeric_limits;
 using std::ostream;
 using std::regex;
 using std::regex_match;
+using std::streamsize;
 using std::string;
 using std::string_view;
 using std::stringstream;
+using std::tuple;
 using std::unordered_map;
 using std::vector;
 
@@ -214,7 +217,7 @@ enum ErrorCodes {
     eINPUT_FILES_NOT_VALID
 };
 
-auto openObbFile(path const& obbfile) {
+[[nodiscard]] auto openObbFile(path const& obbfile) {
     if (exists(obbfile)) {
         if (!is_regular_file(obbfile)) {
             cerr << "Path "sv << obbfile
@@ -242,49 +245,73 @@ auto openObbFile(path const& obbfile) {
     return fout;
 }
 
-[[nodiscard]] auto readInputDir(path const& indir) {
-    if (exists(indir)) {
-        if (!is_directory(indir)) {
-            cerr << "Path "sv << indir << " must be a directory!"sv << endl
-                 << endl;
-            throw ErrorCodes{eINPUT_NOT_DIR};
-        }
-    } else {
+void checkFile(path const& fpath) {
+    if (!exists(fpath)) {
+        cerr << "Input file "sv << fpath
+             << " does not exist! Please re-dump the OBB."sv << endl
+             << endl;
+        throw ErrorCodes{eINPUT_FILES_MISSING};
+    }
+    if (!is_regular_file(fpath)) {
+        cerr << "Input "sv << fpath
+             << " is not a file! Please re-dump the OBB."sv << endl
+             << endl;
+        throw ErrorCodes{eINPUT_FILES_NOT_VALID};
+    }
+    ifstream fin(fpath, ios::in | ios::binary);
+    if (!fin.good()) {
+        cerr << "Input file "sv << fpath
+             << " is not readable! Please re-dump the OBB."sv << endl
+             << endl;
+        throw ErrorCodes{eINPUT_NO_ACCESS};
+    }
+}
+
+[[nodiscard]] auto readInputDir(path const& indir)
+        -> tuple<vector<RFile_entry>, string, string, string> {
+    if (!exists(indir)) {
         cerr << "Input path "sv << indir << " does not exist!"sv << endl
              << endl;
         throw ErrorCodes{eINPUT_NO_ACCESS};
     }
+    if (!is_directory(indir)) {
+        cerr << "Path "sv << indir << " must be a directory!"sv << endl << endl;
+        throw ErrorCodes{eINPUT_NOT_DIR};
+    }
     // Read file list.
     path const filetable(indir / "FileTable.ser");
-    if (!exists(filetable)) {
-        cerr << "Input path "sv << filetable
-             << " does not exist! Please re-dump the OBB to create it."sv
-             << endl
-             << endl;
-        throw ErrorCodes{eINPUT_NO_FILE_TABLE};
-    }
+    checkFile(filetable);
     vector<RFile_entry> entries;
     {
         ifstream      file_table(indir / "FileTable.ser");
         text_iarchive ia(file_table);
         ia >> entries;
     }
+
+    // TODO: Main json file should be found from Info.plist file:
+    //  main json filename = dict["StoryFilename"sv] + ".json"
+    static regex const mainJsonRegex(R"regex(Sorcery\d\.(min)?json)regex"s);
+    // TODO: inkcontent filename should be found from main json:
+    // inkcontent filename = indexed-content/filename
+    static regex const inkContentRegex(R"regex(Sorcery\d\.inkcontent)regex"s);
+
+    string referenceFileName;
+    string mainJsonFileName;
+    string inkconentFileName;
+
     for (auto& entry : entries) {
-        path const fname = indir / entry.name();
-        if (!exists(fname)) {
-            cerr << "Input path "sv << filetable
-                 << " does not exist! Please re-dump the OBB."sv << endl
-                 << endl;
-            throw ErrorCodes{eINPUT_FILES_MISSING};
-        }
-        if (!is_regular_file(fname)) {
-            cerr << "Input path "sv << filetable
-                 << " is not a file! Please re-dump the OBB."sv << endl
-                 << endl;
-            throw ErrorCodes{eINPUT_FILES_NOT_VALID};
+        checkFile(indir / entry.name());
+        string_view fname = entry.name();
+        if (regex_match(fname.cbegin(), fname.cend(), mainJsonRegex)) {
+            referenceFileName = fname.substr(0, "SorceryN"sv.size());
+            referenceFileName += "-Reference.json"s;
+            mainJsonFileName = fname;
+            checkFile(indir / referenceFileName);
+        } else if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
+            inkconentFileName = fname;
         }
     }
-    return entries;
+    return {entries, referenceFileName, mainJsonFileName, inkconentFileName};
 }
 
 inline auto roundUp(uint32_t numToRound, uint32_t multiple) -> uint32_t {
@@ -292,16 +319,12 @@ inline auto roundUp(uint32_t numToRound, uint32_t multiple) -> uint32_t {
     return ((numToRound + multiple - 1) / multiple) * multiple;
 }
 
-auto encodeFile(
-        ofstream& obbContents, path const& infile, bool compressed,
-        bool isReference) -> std::tuple<uint32_t, uint32_t, uint32_t> {
+auto encodeFile(ofstream& obbContents, path const& infile, bool compressed)
+        -> tuple<uint32_t, uint32_t, uint32_t> {
     path const parentdir(infile.parent_path());
-
-    if (!exists(infile)) {
-        cout << "\33[2K\r"sv << flush;
-        cerr << "File "sv << infile << " not found!"sv << endl;
-        return {};
-    }
+    // Sanity check; if someone else is modifying the input directory as we
+    // process the files, we should stop.
+    assert(exists(infile));
 
     size_t     fulllength = file_size(infile);
     bool const isJson     = infile.extension() == ".json"s
@@ -311,24 +334,12 @@ auto encodeFile(
 
     {
         ifstream fin(infile, ios::in | ios::binary);
-        if (!fin.good()) {
-            cout << "\33[2K\r"sv << flush;
-            cerr << "Could not create file "sv << infile << "!"sv << endl;
-            return {};
-        }
-        if (isReference) {
-            cout << "\33[2K\rGenerating story and inkcontent files..."sv
-                 << flush;
-        }
+        // Sanity check; if someone else is modifying the input directory as we
+        // process the files, we should stop.
+        assert(fin.good());
 
         {
             filtering_ostream fsout;
-            if (isReference) {
-                // TODO: Filter should receive OBB wrapper class and read
-                // inkcontent filename = indexed-content/filename
-                // TODO: use unstritch filter
-                // fsout.push(json_unstitch_filter(inkData));
-            }
             if (isJson) {
                 fsout.push(json_filter(eNO_WHITESPACE, &fulllength));
             }
@@ -340,21 +351,18 @@ auto encodeFile(
             fsout << fin.rdbuf();
         }
     }
+
     sint.seekg(0);
-    if (!obbContents.good()) {
-        cout << '\t' << obbContents.rdstate() << endl;
-    }
     obbContents << sint.rdbuf();
+
     sint.seekg(0);
-    sint.ignore(std::numeric_limits<std::streamsize>::max());
+    sint.ignore(numeric_limits<streamsize>::max());
     uint32_t const complength = sint.gcount();
-    uint32_t const padding    = roundUp(complength, 16U) - complength;
+
+    uint32_t const padding = roundUp(complength, 16U) - complength;
     constexpr static const array<char, 16U> nullPadding{};
     obbContents.write(nullPadding.data(), padding);
 
-    if (isReference) {
-        cout << "done."sv << flush;
-    }
     return {fulllength, complength, padding};
 }
 
@@ -368,8 +376,9 @@ auto main(int argc, char* argv[]) -> int {
             return eWRONG_ARGC;
         }
 
-        path const          indir(argv[1]);
-        vector<RFile_entry> entries = readInputDir(indir);
+        path const indir(argv[1]);
+        auto [entries, referenceFile, inkcontentFile, mainJsonFile]
+                = readInputDir(indir);
 
         path const obbfile(argv[2]);
         auto       obbptr      = openObbFile(obbfile);
@@ -381,75 +390,40 @@ auto main(int argc, char* argv[]) -> int {
         Write4(obbcontents, 0U);    // Placeholder for file table position
         curr_offset += 8;
 
-        // TODO: Main json file should be found from Info.plist file:
-        //  main json filename = dict["StoryFilename"sv]
-        regex const mainJsonRegex(R"regex(Sorcery\d\.(min)?json)regex"s);
-        // TODO: inkcontent filename should be found from main json: inkcontent
-        // filename = indexed-content/filename
-        regex const inkContentRegex(R"regex(Sorcery\d\.inkcontent)regex"s);
+        // TODO: Regenerate story and inkcontent from reference file
 
         RFile_entry inkContent;
 
         for (auto& elem : entries) {
-            // Ignore inkcontent file, we will regenerate it later while
-            // processing main story file.
-            string_view fname = entries.back().name();
-#if 1
-            if (regex_match(fname.cbegin(), fname.cend(), inkContentRegex)) {
-                inkContent = elem;
-                continue;
-            }
-            bool isReference = false;
-#else
-            bool isReference
-                    = regex_match(fname.cbegin(), fname.cend(), mainJsonRegex);
-#endif
-            if (isReference) {
-                // Time to process both inkcontent and story file.
-                cout << "\33[2K\rFound main json : "sv << fname << endl;
-            } else {
-                cout << "\33[2K\rPacking file "sv << elem.name() << flush;
-
-                path infile(indir / elem.name());
-                auto [file_fulllength, file_complength, file_padding]
-                        = encodeFile(
-                                obbcontents, infile, elem.compressed,
-                                isReference);
-                elem.fdata = {curr_offset, file_fulllength, file_complength};
-                curr_offset += file_complength + file_padding;
-            }
+            cout << "\33[2K\rPacking file "sv << elem.name() << flush;
+            path infile(indir / elem.name());
+            auto [file_fulllength, file_complength, file_padding]
+                    = encodeFile(obbcontents, infile, elem.compressed);
+            elem.fdata = {curr_offset, file_fulllength, file_complength};
+            curr_offset += file_complength + file_padding;
         }
 
-#if 0
-        if (!mainJson.file().empty() && !inkContent.file().empty()) {
-            string const fname =
-                mainJson.name().substr(0, "SorceryN"sv.size()) +
-                "-Reference.json"s;
-            path const outfile(indir / fname);
-            encodeFile(
-                outfile, mainJson.file(), inkContent.file(),
-                mainJson.compressed, true);
-        }
-#endif
         cout << endl;
         cout << "\33[2K\rCreating name table... "sv << flush;
-        unordered_map<std::string, uint32_t> nameOffsets;
+        unordered_map<string, uint32_t> nameOffsets;
         for (auto& elem : entries) {
-            std::string const& fname = elem.fname;
-            nameOffsets[fname]       = curr_offset;
+            string const& fname = elem.fname;
+            nameOffsets[fname]  = curr_offset;
             curr_offset += fname.size();
             obbcontents.write(
                     fname.data(), static_cast<uint32_t>(fname.size()));
         }
         cout << "done."sv << endl;
+
         uint32_t const padding = roundUp(curr_offset, 16U) - curr_offset;
         constexpr static const array<char, 16U> nullPadding{};
         obbcontents.write(nullPadding.data(), padding);
         curr_offset += padding;
+
         cout << "\33[2K\rCreating file table... "sv << flush;
         uint32_t file_table_pos = curr_offset;
         for (auto& elem : entries) {
-            std::string const& fname = elem.fname;
+            string const& fname = elem.fname;
             Write4(obbcontents, nameOffsets[fname]);
             Write4(obbcontents, fname.size());
             File_data const& fdata = elem.fdata;
@@ -458,11 +432,13 @@ auto main(int argc, char* argv[]) -> int {
             Write4(obbcontents, fdata.complength);
             curr_offset += 20;
         }
+
+        // Fill in the file size and file table offset
         obbcontents.seekp(curr_pos);
         Write4(obbcontents, curr_offset);
         Write4(obbcontents, file_table_pos);
         cout << "done."sv << endl;
-    } catch (std::exception const& except) {
+    } catch (exception const& except) {
         cerr << except.what() << endl;
     } catch (ErrorCodes err) {
         return err;
