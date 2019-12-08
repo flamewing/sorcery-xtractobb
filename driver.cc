@@ -34,7 +34,8 @@
 #include "parser.hh"
 #pragma GCC diagnostic pop
 
-driver::driver(std::ostream& out_) : out(out_) {}
+driver::driver(std::ostream& out_)
+        : out(out_) {}
 
 auto driver::parse(const std::string& f) -> int {
     file = f;
@@ -42,7 +43,7 @@ auto driver::parse(const std::string& f) -> int {
     scan_begin();
     yy::parser parse(*this);
     parse.set_debug_level(
-        static_cast<yy::parser::debug_level_type>(trace_parsing));
+            static_cast<yy::parser::debug_level_type>(trace_parsing));
     int res = parse.parse();
     scan_end();
     return res;

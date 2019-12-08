@@ -33,15 +33,15 @@ namespace jsont {
     }
 
     inline auto Tokenizer::readAtom(string_view atom, Token token) noexcept
-        -> Token {
+            -> Token {
         if (availableInput() < atom.length()) {
             return setError(Tokenizer::PrematureEndOfInput);
         }
         if (_input.compare(_offset, atom.length(), atom) != 0) {
             return setError(Tokenizer::InvalidByte);
         }
-        if (availableInput() > atom.length() &&
-            safe_isalnum(_input[_offset + atom.length()])) {
+        if (availableInput() > atom.length()
+            && safe_isalnum(_input[_offset + atom.length()])) {
             return setError(Tokenizer::SyntaxError);
         }
         _offset += atom.length();
@@ -49,7 +49,7 @@ namespace jsont {
     }
 
     __attribute__((pure)) auto Tokenizer::errorMessage() const noexcept
-        -> string_view {
+            -> string_view {
         switch (_error) {
         case UnexpectedComma:
             return "Unexpected comma"sv;
@@ -168,7 +168,7 @@ namespace jsont {
     }
 
     inline auto Tokenizer::readNumber(char b, size_t token_start) noexcept
-        -> Token {
+            -> Token {
         bool have_digit = safe_isdigit(b);
         if (!have_digit && b != '-') {
             return setError(InvalidByte);
@@ -177,8 +177,8 @@ namespace jsont {
         // Note: JSON grammar allows for a JSON file with a single number
         // surrounded by optional whitespace. Thus, we cannot return
         // end-of-input here or we will miss the number.
-        if (!readDigits(static_cast<size_t>(have_digit)) || !readFraction() ||
-            !readExponent()) {
+        if (!readDigits(static_cast<size_t>(have_digit)) || !readFraction()
+            || !readExponent()) {
             return setError(MalformedNumberLiteral);
         }
         _value = _input.substr(token_start, _offset - token_start);
@@ -217,7 +217,7 @@ namespace jsont {
             case ',':
             case ']':
             case '}':
-                --_offset; // rewind
+                --_offset;    // rewind
                 return setToken(jsont::String);
             case 0:
                 return setError(InvalidByte);
@@ -274,4 +274,4 @@ namespace jsont {
         return setToken(End);
     }
 
-} // namespace jsont
+}    // namespace jsont

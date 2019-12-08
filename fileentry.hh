@@ -18,18 +18,11 @@
 #ifndef FILEENTRY_HH
 #define FILEENTRY_HH
 
+#include "endianio.hh"
+
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
-
-#include "endianio.hh"
 #include <string_view>
-
-BOOST_CLASS_IMPLEMENTATION(
-    std::string_view, boost::serialization::primitive_type)
-#ifndef BOOST_NO_STD_WSTRING
-BOOST_CLASS_IMPLEMENTATION(
-    std::wstring_view, boost::serialization::primitive_type)
-#endif
 
 struct File_data {
     uint32_t offset     = 0U;
@@ -48,11 +41,13 @@ struct Basic_File_entry {
     [[nodiscard]] auto name() const noexcept -> std::string const& {
         return fname;
     }
-    [[nodiscard]] auto file() const noexcept -> FileDataT { return fdata; }
+    [[nodiscard]] auto file() const noexcept -> FileDataT {
+        return fdata;
+    }
     Basic_File_entry() noexcept = default;
     Basic_File_entry(
-        std::string_view::const_iterator it,
-        std::string_view                 oggview) noexcept {
+            std::string_view::const_iterator it,
+            std::string_view                 oggview) noexcept {
         fname      = getData(it, oggview);
         fdata      = getData(it, oggview);
         compressed = fdata.size() != Read4(it);
@@ -60,9 +55,9 @@ struct Basic_File_entry {
 
 private:
     friend class boost::serialization::access;
-    static auto getData(
-        std::string_view::const_iterator& it, std::string_view oggview) noexcept
-        -> std::string_view {
+    static auto
+            getData(std::string_view::const_iterator& it,
+                    std::string_view oggview) noexcept -> std::string_view {
         uint32_t ptr = Read4(it);
         uint32_t len = Read4(it);
         return oggview.substr(ptr, len);

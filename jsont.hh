@@ -18,19 +18,19 @@
 namespace jsont {
     // Tokens
     enum Token : uint32_t {
-        End = 0,     // Input ended
-        ObjectStart, // {
-        ObjectEnd,   // }
-        ArrayStart,  // [
-        ArrayEnd,    // ]
-        True,        // true
-        False,       // false
-        Null,        // null
-        Integer,     // number value without a fraction part
-        Float,       // number value with a fraction part
-        String,      // string value
-        FieldName,   // field name
-        Error,       // An error occured (see `error()` for details)
+        End = 0,        // Input ended
+        ObjectStart,    // {
+        ObjectEnd,      // }
+        ArrayStart,     // [
+        ArrayEnd,       // ]
+        True,           // true
+        False,          // false
+        Null,           // null
+        Integer,        // number value without a fraction part
+        Float,          // number value with a fraction part
+        String,         // string value
+        FieldName,      // field name
+        Error,          // An error occured (see `error()` for details)
         Comma
     };
 
@@ -128,18 +128,24 @@ namespace jsont {
     // ------------------- internal ---------------------
 
     inline Tokenizer::Tokenizer(const char* bytes, size_t length) noexcept
-        : _offset(0), _token(End), _error(UnspecifiedError) {
+            : _offset(0)
+            , _token(End)
+            , _error(UnspecifiedError) {
         initConverter();
         reset(bytes, length);
     }
 
     inline Tokenizer::Tokenizer(std::string_view slice) noexcept
-        : _offset(0), _token(End), _error(UnspecifiedError) {
+            : _offset(0)
+            , _token(End)
+            , _error(UnspecifiedError) {
         initConverter();
         reset(slice);
     }
 
-    inline auto Tokenizer::current() const noexcept -> Token { return _token; }
+    inline auto Tokenizer::current() const noexcept -> Token {
+        return _token;
+    }
 
     inline void Tokenizer::reset(const char* bytes, size_t length) noexcept {
         reset(std::string_view(bytes, length));
@@ -166,7 +172,7 @@ namespace jsont {
     }
 
     inline auto Tokenizer::translateToken(Token tok) const noexcept
-        -> std::string_view {
+            -> std::string_view {
         return _convert.find(tok)->second;
     }
 
@@ -197,7 +203,7 @@ namespace jsont {
     }
 
     inline auto Tokenizer::setError(Tokenizer::ErrorCode error) noexcept
-        -> Token {
+            -> Token {
         _error        = error;
         return _token = Error;
     }
@@ -216,6 +222,6 @@ namespace jsont {
     inline auto Tokenizer::error() const noexcept -> Tokenizer::ErrorCode {
         return _error;
     }
-} // namespace jsont
+}    // namespace jsont
 
-#endif // JSONT_CXX_INCLUDED
+#endif    // JSONT_CXX_INCLUDED

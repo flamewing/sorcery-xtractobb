@@ -15,8 +15,24 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "fileentry.hh"
+#include "jsont.hh"
+#include "prettyJson.hh"
+
 #include <algorithm>
 #include <array>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/interprocess/streams/bufferstream.hpp>
+#include <boost/iostreams/device/array.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/device/file_descriptor.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
+#include <boost/iostreams/filter/aggregate.hpp>
+#include <boost/iostreams/filter/zlib.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/stream.hpp>
+#include <boost/serialization/vector.hpp>
 #include <cstdio>
 #include <cstring>
 #include <iomanip>
@@ -30,22 +46,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/interprocess/streams/bufferstream.hpp>
-#include <boost/iostreams/device/array.hpp>
-#include <boost/iostreams/device/file.hpp>
-#include <boost/iostreams/device/file_descriptor.hpp>
-#include <boost/iostreams/device/mapped_file.hpp>
-#include <boost/iostreams/filter/aggregate.hpp>
-#include <boost/iostreams/filter/zlib.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/serialization/vector.hpp>
-
-#include "fileentry.hh"
-#include "jsont.hh"
-#include "prettyJson.hh"
 
 using std::allocator;
 using std::array;
@@ -81,10 +81,11 @@ using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
 // Redefine assert macro to avoid clang-tidy noise.
 #ifndef __MINGW64__
 #    undef assert
-#    define assert(expr)                                                       \
-        ((expr) ? void(0)                                                      \
-                : __assert_fail(                                               \
-                      #expr, __FILE__, __LINE__, __ASSERT_FUNCTION)) // NOLINT
+#    define assert(expr)                           \
+        ((expr) ? void(0)                          \
+                : __assert_fail(                   \
+                        #expr, __FILE__, __LINE__, \
+                        __ASSERT_FUNCTION))    // NOLINT
 #endif
 
 // Sorcery! JSON stitch filter for boost::filtering_ostream
@@ -100,7 +101,7 @@ public:
 
     // TODO: Filter should receive output directory instead.
     explicit basic_json_unstitch_filter(string_view const _inkContent)
-        : inkContent(_inkContent) {}
+            : inkContent(_inkContent) {}
 
 private:
     decltype(auto) printValueRaw(vectorstream& sint, jsont::Tokenizer& reader) {
@@ -108,7 +109,7 @@ private:
     }
 
     decltype(auto)
-    printValueObject(vectorstream& sint, jsont::Tokenizer& reader) {
+            printValueObject(vectorstream& sint, jsont::Tokenizer& reader) {
         return sint << reader.dataValue() << ':';
     }
 
@@ -127,11 +128,11 @@ private:
             if (reader.dataValue() == R"("filename")"sv) {
                 // TODO: instead of being discarded, this should be used with
                 // output directoty to open stitch source file
-                tok = reader.next(); // Fetch filename...
+                tok = reader.next();    // Fetch filename...
                 assert(tok == jsont::String);
-                tok = reader.next(); // ... and discard it
+                tok = reader.next();    // ... and discard it
                 assert(tok == jsont::Comma);
-                tok = reader.next(); // Discard comma after it as well
+                tok = reader.next();    // Discard comma after it as well
             } else if (reader.dataValue() == R"("ranges")"sv) {
                 // The meat.
                 tok = reader.next();
@@ -146,7 +147,8 @@ private:
                     // Remove starting double-quotes
                     slice.remove_prefix(1);
                     ibufferstream sptr(
-                        slice.data(), slice.length(), ios::in | ios::binary);
+                            slice.data(), slice.length(),
+                            ios::in | ios::binary);
                     unsigned offset;
                     unsigned length;
                     sptr >> offset >> length;
@@ -203,11 +205,8 @@ using wjson_unstitch_filter = basic_json_unstitch_filter<wchar_t>;
 enum ErrorCodes {
     eOK,
     eWRONG_ARGC,
-    eOBB_NOT_FOUND,
     eOBB_NOT_FILE,
     eOBB_NO_ACCESS,
-    eOBB_INVALID,
-    eOBB_CORRUPT,
     eINPUT_NOT_DIR,
     eINPUT_NO_ACCESS,
     eINPUT_NO_FILE_TABLE,
@@ -231,8 +230,8 @@ auto openObbFile(path const& obbfile) {
         }
     }
 
-    std::unique_ptr fout =
-        std::make_unique<ofstream>(obbfile, ios::out | ios::binary);
+    std::unique_ptr fout
+            = std::make_unique<ofstream>(obbfile, ios::out | ios::binary);
     if (!fout->good()) {
         cerr << "Could not open output file "sv << obbfile << "!"sv << endl
              << endl;
@@ -294,8 +293,8 @@ inline auto roundUp(uint32_t numToRound, uint32_t multiple) -> uint32_t {
 }
 
 auto encodeFile(
-    ofstream& obbContents, path const& infile, bool compressed,
-    bool isReference) -> std::tuple<uint32_t, uint32_t, uint32_t> {
+        ofstream& obbContents, path const& infile, bool compressed,
+        bool isReference) -> std::tuple<uint32_t, uint32_t, uint32_t> {
     path const parentdir(infile.parent_path());
 
     if (!exists(infile)) {
@@ -305,8 +304,8 @@ auto encodeFile(
     }
 
     size_t     fulllength = file_size(infile);
-    bool const isJson =
-        infile.extension() == ".json"s || infile.extension() == ".inkcontent"s;
+    bool const isJson     = infile.extension() == ".json"s
+                        || infile.extension() == ".inkcontent"s;
 
     stringstream sint(ios::in | ios::out | ios::binary);
 
@@ -334,8 +333,8 @@ auto encodeFile(
                 fsout.push(json_filter(eNO_WHITESPACE, &fulllength));
             }
             if (compressed) {
-                fsout.push(
-                    zlib_compressor(zlib::best_compression, 1 * 1024 * 1024));
+                fsout.push(zlib_compressor(
+                        zlib::best_compression, 1 * 1024 * 1024));
             }
             fsout.push(sint);
             fsout << fin.rdbuf();
@@ -378,8 +377,8 @@ auto main(int argc, char* argv[]) -> int {
 
         uint32_t curr_offset = 8;
         auto     curr_pos    = obbcontents.tellp();
-        Write4(obbcontents, 0U); // Placeholder for file size
-        Write4(obbcontents, 0U); // Placeholder for file table position
+        Write4(obbcontents, 0U);    // Placeholder for file size
+        Write4(obbcontents, 0U);    // Placeholder for file table position
         curr_offset += 8;
 
         // TODO: Main json file should be found from Info.plist file:
@@ -402,8 +401,8 @@ auto main(int argc, char* argv[]) -> int {
             }
             bool isReference = false;
 #else
-            bool isReference =
-                regex_match(fname.cbegin(), fname.cend(), mainJsonRegex);
+            bool isReference
+                    = regex_match(fname.cbegin(), fname.cend(), mainJsonRegex);
 #endif
             if (isReference) {
                 // Time to process both inkcontent and story file.
@@ -412,9 +411,10 @@ auto main(int argc, char* argv[]) -> int {
                 cout << "\33[2K\rPacking file "sv << elem.name() << flush;
 
                 path infile(indir / elem.name());
-                auto [file_fulllength, file_complength, file_padding] =
-                    encodeFile(
-                        obbcontents, infile, elem.compressed, isReference);
+                auto [file_fulllength, file_complength, file_padding]
+                        = encodeFile(
+                                obbcontents, infile, elem.compressed,
+                                isReference);
                 elem.fdata = {curr_offset, file_fulllength, file_complength};
                 curr_offset += file_complength + file_padding;
             }
@@ -439,7 +439,7 @@ auto main(int argc, char* argv[]) -> int {
             nameOffsets[fname]       = curr_offset;
             curr_offset += fname.size();
             obbcontents.write(
-                fname.data(), static_cast<uint32_t>(fname.size()));
+                    fname.data(), static_cast<uint32_t>(fname.size()));
         }
         cout << "done."sv << endl;
         uint32_t const padding = roundUp(curr_offset, 16U) - curr_offset;

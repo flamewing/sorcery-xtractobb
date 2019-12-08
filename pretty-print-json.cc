@@ -15,15 +15,14 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <iostream>
-#include <string_view>
-#include <vector>
+#include "prettyJson.hh"
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/iostreams/stream.hpp>
-
-#include "prettyJson.hh"
+#include <iostream>
+#include <string_view>
+#include <vector>
 
 using std::cerr;
 using std::cout;

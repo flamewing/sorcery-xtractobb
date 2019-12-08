@@ -22,10 +22,9 @@ enum PrettyJSON { eNO_WHITESPACE = -1, ePRETTY = 0, eCOMPACT = 1 };
 
 #include "jsont.hh"
 
-#include <iostream>
-
 #include <boost/interprocess/streams/vectorstream.hpp>
 #include <boost/iostreams/filter/aggregate.hpp>
+#include <iostream>
 
 using vectorstream = boost::interprocess::basic_vectorstream<std::vector<char>>;
 
@@ -51,8 +50,8 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
     auto printValueRaw = [&sint, &reader]() -> decltype(auto) {
         return sint << reader.dataValue();
     };
-    auto printValueObject = [&printValueRaw, &sint, &reader,
-                             &pretty]() -> decltype(auto) {
+    auto printValueObject
+            = [&printValueRaw, &sint, &reader, &pretty]() -> decltype(auto) {
         printValueRaw() << ':';
         if (pretty != eNO_WHITESPACE) {
             sint << ' ';
@@ -75,7 +74,7 @@ void printJSON(Src const& data, Dst& sint, PrettyJSON const pretty) {
         case jsont::ArrayStart: {
             printIndentedValue(printValueRaw, false);
             auto const next = static_cast<jsont::Token>(
-                static_cast<uint8_t>(tok) + uint8_t(1));
+                    static_cast<uint8_t>(tok) + uint8_t(1));
             tok = reader.next();
             if (tok == next) {
                 printValueRaw();
@@ -122,7 +121,8 @@ public:
     using category  = typename base_type::category;
 
     explicit basic_json_filter(PrettyJSON _pretty, size_t* _length = nullptr)
-        : pretty(_pretty), length(_length) {}
+            : pretty(_pretty)
+            , length(_length) {}
 
 private:
     using vector_type = typename base_type::vector_type;
@@ -151,4 +151,4 @@ BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
 using json_filter  = basic_json_filter<char>;
 using wjson_filter = basic_json_filter<wchar_t>;
 
-#endif // PRETTY_JSON_H
+#endif    // PRETTY_JSON_H

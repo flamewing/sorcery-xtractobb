@@ -15,19 +15,12 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "fileentry.hh"
+#include "jsont.hh"
+#include "prettyJson.hh"
+
 #include <algorithm>
 #include <array>
-#include <cstdio>
-#include <cstring>
-#include <iomanip>
-#include <iostream>
-#include <iterator>
-#include <memory>
-#include <regex>
-#include <string>
-#include <string_view>
-#include <vector>
-
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/interprocess/streams/bufferstream.hpp>
@@ -40,10 +33,16 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/serialization/vector.hpp>
-
-#include "fileentry.hh"
-#include "jsont.hh"
-#include "prettyJson.hh"
+#include <cstdio>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <iterator>
+#include <memory>
+#include <regex>
+#include <string>
+#include <string_view>
+#include <vector>
 
 using std::allocator;
 using std::cerr;
@@ -77,10 +76,11 @@ using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
 // Redefine assert macro to avoid clang-tidy noise.
 #ifndef __MINGW64__
 #    undef assert
-#    define assert(expr)                                                       \
-        ((expr) ? void(0)                                                      \
-                : __assert_fail(                                               \
-                      #expr, __FILE__, __LINE__, __ASSERT_FUNCTION)) // NOLINT
+#    define assert(expr)                           \
+        ((expr) ? void(0)                          \
+                : __assert_fail(                   \
+                        #expr, __FILE__, __LINE__, \
+                        __ASSERT_FUNCTION))    // NOLINT
 #endif
 
 // Sorcery! JSON stitch filter for boost::filtering_ostream
@@ -96,7 +96,7 @@ public:
 
     // TODO: Filter should receive output directory instead.
     explicit basic_json_stitch_filter(string_view const _inkContent)
-        : inkContent(_inkContent) {}
+            : inkContent(_inkContent) {}
 
 private:
     decltype(auto) printValueRaw(vectorstream& sint, jsont::Tokenizer& reader) {
@@ -104,7 +104,7 @@ private:
     }
 
     decltype(auto)
-    printValueObject(vectorstream& sint, jsont::Tokenizer& reader) {
+            printValueObject(vectorstream& sint, jsont::Tokenizer& reader) {
         return sint << reader.dataValue() << ':';
     }
 
@@ -123,11 +123,11 @@ private:
             if (reader.dataValue() == R"("filename")"sv) {
                 // TODO: instead of being discarded, this should be used with
                 // output directoty to open stitch source file
-                tok = reader.next(); // Fetch filename...
+                tok = reader.next();    // Fetch filename...
                 assert(tok == jsont::String);
-                tok = reader.next(); // ... and discard it
+                tok = reader.next();    // ... and discard it
                 assert(tok == jsont::Comma);
-                tok = reader.next(); // Discard comma after it as well
+                tok = reader.next();    // Discard comma after it as well
             } else if (reader.dataValue() == R"("ranges")"sv) {
                 // The meat.
                 tok = reader.next();
@@ -142,8 +142,8 @@ private:
                     // Remove starting double-quotes
                     slice.remove_prefix(1);
                     ibufferstream sptr(
-                        slice.data(), slice.length(),
-                        ios::in | ios::binary);
+                            slice.data(), slice.length(),
+                            ios::in | ios::binary);
                     unsigned offset;
                     unsigned length;
                     sptr >> offset >> length;
@@ -253,8 +253,8 @@ void createOutputDir(path const& outdir) {
 }
 
 void decodeFile(
-    zlib_decompressor& unzip, path outfile, string_view fdata,
-    string_view inkData, bool compressed, bool isReference) {
+        zlib_decompressor& unzip, path outfile, string_view fdata,
+        string_view inkData, bool compressed, bool isReference) {
     path const parentdir(outfile.parent_path());
 
     if (!exists(parentdir) && !create_directories(parentdir)) {
@@ -285,8 +285,8 @@ void decodeFile(
         // inkcontent filename = indexed-content/filename
         fsout.push(json_stitch_filter(inkData));
     }
-    if (outfile.extension() == ".json"s ||
-        outfile.extension() == ".inkcontent"s) {
+    if (outfile.extension() == ".json"s
+        || outfile.extension() == ".inkcontent"s) {
         fsout.push(json_filter(ePRETTY));
     }
     fsout.push(fout);
@@ -342,7 +342,7 @@ auto main(int argc, char* argv[]) -> int {
                 mainJson = entries.back();
                 cout << "\33[2K\rFound main json : "sv << fname << endl;
             } else if (regex_match(
-                           fname.cbegin(), fname.cend(), inkContentRegex)) {
+                               fname.cbegin(), fname.cend(), inkContentRegex)) {
                 inkContent = entries.back();
                 cout << "\33[2K\rFound inkcontent: "sv << fname << endl;
             }
@@ -364,18 +364,17 @@ auto main(int argc, char* argv[]) -> int {
 
             path outfile(outdir / elem.name());
             decodeFile(
-                unzip, outfile, elem.file(), inkContent.file(), elem.compressed,
-                false);
+                    unzip, outfile, elem.file(), inkContent.file(),
+                    elem.compressed, false);
         }
 
         if (!mainJson.file().empty() && !inkContent.file().empty()) {
-            string const fname =
-                mainJson.name().substr(0, "SorceryN"sv.size()) +
-                "-Reference.json"s;
+            string const fname = mainJson.name().substr(0, "SorceryN"sv.size())
+                                 + "-Reference.json"s;
             path const outfile(outdir / fname);
             decodeFile(
-                unzip, outfile, mainJson.file(), inkContent.file(),
-                mainJson.compressed, true);
+                    unzip, outfile, mainJson.file(), inkContent.file(),
+                    mainJson.compressed, true);
         }
         cout << endl;
     } catch (std::exception const& except) {

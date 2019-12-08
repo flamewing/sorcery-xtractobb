@@ -18,10 +18,10 @@
 #ifndef DRIVER_HH
 #define DRIVER_HH
 
+#include "polymorphic_value.hh"
+
 #include <iosfwd>
 #include <string>
-
-#include "polymorphic_value.hh"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
@@ -41,7 +41,7 @@
 #pragma GCC diagnostic pop
 
 // Give Flex the prototype of yylex we want ...
-#define YY_DECL auto yylex(driver& drv) -> yy::parser::symbol_type
+#define YY_DECL auto yylex(driver& drv)->yy::parser::symbol_type
 // ... and declare it for the parser's sake.
 YY_DECL;
 
