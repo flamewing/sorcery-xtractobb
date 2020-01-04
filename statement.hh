@@ -18,6 +18,8 @@
 #ifndef STATEMENT_HH
 #define STATEMENT_HH
 
+#include <experimental/iterator>
+#include <algorithm>
 #include <map>
 #include <ostream>
 #include <set>
@@ -294,17 +296,17 @@ protected:
         out << name;
         if (!headerVariables.empty()) {
             out << '(';
-            bool firstVar = true;
-            for (auto const& [varName, isRef] : headerVariables) {
-                if (!firstVar) {
-                    out << ", ";
-                    firstVar = true;
-                }
-                if (isRef) {
-                    out << "ref ";
-                }
-                out << varName;
-            }
+            std::transform(
+                    headerVariables.cbegin(), headerVariables.cend(),
+                    std::experimental::make_ostream_joiner(out, ", "),
+                    [](auto const& kvPair) {
+                        auto const& [varName, isRef] = kvPair;
+                        if (isRef) {
+                            using namespace std::literals::string_literals;
+                            return "ref "s + varName;
+                        }
+                        return varName;
+                    });
             out << ')';
         }
         return out;
