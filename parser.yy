@@ -197,8 +197,8 @@
 %type <std::string> functionName "function name"
 %type <std::string> JsonValueSimple
 
-%type <std::vector<GlobalVariableStatement>> varList "global variable listt"
-%type <GlobalVariableStatement>              varDecl "variablle declaration"
+%type <std::vector<GlobalVariableStatement>> varList "global variable list"
+%type <GlobalVariableStatement>              varDecl "variable declaration"
 
 %type <std::vector<nonstd::polymorphic_value<TopLevelStatement>>> functionList "function list"
 %type <nonstd::polymorphic_value<TopLevelStatement>>              function     "function definition"
@@ -214,7 +214,7 @@
 
 %type <UnaryOps>   unaryOps      "unary mathematical operations"
 %type <PostfixOps> postfixOps    "unary postfix mathematical operations"
-%type <BinaryOps>  binaryOps      "binary mathematical operations"
+%type <BinaryOps>  binaryOps     "binary mathematical operations"
 
 %type <bool> JsonMapValueListOpt JsonArrayValueListOpt
 
