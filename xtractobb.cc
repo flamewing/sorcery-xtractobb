@@ -75,16 +75,6 @@ namespace zlib = boost::iostreams::zlib;
 
 using ibufferstream = boost::interprocess::basic_ibufferstream<char>;
 
-// Redefine assert macro to avoid clang-tidy noise.
-#ifndef __MINGW64__
-#    undef assert
-#    define assert(expr)                           \
-        ((expr) ? void(0)                          \
-                : __assert_fail(                   \
-                        #expr, __FILE__, __LINE__, \
-                        __ASSERT_FUNCTION))    // NOLINT
-#endif
-
 // Sorcery! JSON stitch filter for boost::filtering_ostream
 template <typename Ch, typename Alloc = allocator<Ch>>
 class basic_json_stitch_filter : public aggregate_filter<Ch, Alloc> {

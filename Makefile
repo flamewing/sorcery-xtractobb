@@ -95,6 +95,10 @@ driver.o: parser.cc parser.hh
 
 scanner.o: parser.cc parser.hh
 
+parser.hh: parser.cc
+
+scanner.hh: scanner.cc
+
 %.cc: %.yy
 	$(YACC) -Wno-yacc -d -o parser.cc parser.yy
 	for ff in parser.cc parser.hh location.hh ; do \
