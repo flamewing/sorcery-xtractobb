@@ -18,7 +18,7 @@ REPACK_OBB_SRCSCXX := repackobb.cc jsont.cc
 PRETTYJSON_SRCSCXX := pretty-print-json.cc jsont.cc
 JSON2INK_SRCSCXX   := parser.cc scanner.cc expression.cc statement.cc driver.cc json2ink.cc
 SRCSCXX            := $(EXTRACTOBB_SRCSCXX) $(REPACK_OBB_SRCSCXX) $(PRETTYJSON_SRCSCXX) $(JSON2INK_SRCSCXX)
-EXTRA_SRCSCXX      := parser.cc scanner.cc parser.hh location.hh position.hh stack.hh
+EXTRA_SRCSCXX      := parser.cc scanner.cc parser.hh location.hh
 
 EXTRACTOBB_OBJECTS := $(EXTRACTOBB_SRCSCXX:%.cc=%.o)
 REPACK_OBB_OBJECTS := $(REPACK_OBB_SRCSCXX:%.cc=%.o)
@@ -102,12 +102,12 @@ scanner.hh: scanner.cc
 %.cc: %.yy
 	$(YACC) -Wno-yacc -d -o parser.cc parser.yy
 	for ff in parser.cc parser.hh location.hh ; do \
-		sed -ri 's%(^.*[^\\*]$$)%\1// NOLINT%' $$ff; \
+		sed -i 's%\(^.*[^\\*]$$\)%\1// NOLINT%' $$ff; \
 	done
 
 %.cc: %.ll
 	$(LEXER) --outfile=scanner.cc scanner.ll
-	sed -ri 's%(^.*[^\\*]$$)%\1// NOLINT%' scanner.cc
+	sed -i 's%\(^.*[^\\*]$$\)%\1// NOLINT%' scanner.cc
 
 # Dependencies
 -include $(DEPENDENCIES)
