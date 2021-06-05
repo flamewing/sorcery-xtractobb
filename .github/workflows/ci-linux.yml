@@ -32,7 +32,6 @@ jobs:
     strategy:
       matrix:
         compiler: [gcc, clang]
-        generator: [make, ninja]
         include:
           - compiler: gcc
             cc: gcc
@@ -40,15 +39,11 @@ jobs:
           - compiler: clang
             cc: clang
             cxx: clang++
-          - generator: make
-            cmake_generator: "Unix Makefiles"
-          - generator: ninja
-            cmake_generator: "Ninja"
     steps:
       - name: Install dependencies
         run: |
           sudo apt-fast update
-          sudo apt-fast install -y libboost-all-dev ninja-build
+          sudo apt-fast install -y libboost-all-dev bison flex
       - name: Checkout code
         uses: actions/checkout@master
       - name: Build

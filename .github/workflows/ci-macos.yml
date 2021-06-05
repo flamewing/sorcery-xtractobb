@@ -29,35 +29,18 @@ on:
 jobs:
   ci-macos:
     runs-on: macos-latest
-    strategy:
-      matrix:
-        generator: [make, ninja, xcode]
-        include:
-          - generator: make
-            cmake_generator: "Unix Makefiles"
-          - generator: ninja
-            cmake_generator: "Ninja"
-          - generator: xcode
-            cmake_generator: "Xcode"
     steps:
       - name: Install dependencies
         run: |
-          brew install boost make ninja
+          brew install boost make bison flex
       - name: Checkout code
         uses: actions/checkout@master
       - name: Build
-        env:
-          OVERRIDE_CC: ${{ matrix.cc }}
-          OVERRIDE_CXX: ${{ matrix.cxx }}
         run: |
-          export CC=$(which $OVERRIDE_CC)
-          export CXX=$(which $OVERRIDE_CXX)
+          export LDFLAGS="-L$(brew --prefix bison)/lib -L$(brew --prefix flex)/lib
+          export CPPFLAGS="-I$(brew --prefix flex)/include
+          export PATH="$(brew --prefix bison)/bin:$(brew --prefix flex)/bin:$PATH"
           make -j2
       - name: Test
-        env:
-          OVERRIDE_CC: ${{ matrix.cc }}
-          OVERRIDE_CXX: ${{ matrix.cxx }}
         run: |
-          export CC=$(which $OVERRIDE_CC)
-          export CXX=$(which $OVERRIDE_CXX)
           make test

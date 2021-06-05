@@ -35,7 +35,7 @@ jobs:
         if: ${{ env.REPO_ALIVE == 'true' }} == 'true'
         run: |
           sudo apt-fast update
-          sudo apt-fast install -y libboost-all-dev
+          sudo apt-fast install -y libboost-all-dev bison flex
       - name: Download Coverity Build Tool
         if: ${{ env.REPO_ALIVE == 'true' }} == 'true'
         run: |

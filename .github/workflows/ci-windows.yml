@@ -32,15 +32,8 @@ jobs:
     strategy:
       matrix:
         # generator: [make, msys, vs2019]
-        generator: [make, msys]
         architecture: [i686, x86_64]
         include:
-          - generator: make
-            cmake_generator: "Unix Makefiles"
-          - generator: msys
-            cmake_generator: "MSYS Makefiles"
-          # - generator: vs2019
-          #   cmake_generator: "Visual Studio 16 2019"
           - architecture: i686
             msystem: MINGW32
             arch: i686
@@ -62,18 +55,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@master
       - name: Build
-        env:
-          OVERRIDE_CC: ${{ matrix.cc }}
-          OVERRIDE_CXX: ${{ matrix.cxx }}
         run: |
-          export CC=$(which $OVERRIDE_CC)
-          export CXX=$(which $OVERRIDE_CXX)
           make -j2
       - name: Test
-        env:
-          OVERRIDE_CC: ${{ matrix.cc }}
-          OVERRIDE_CXX: ${{ matrix.cxx }}
         run: |
-          export CC=$(which $OVERRIDE_CC)
-          export CXX=$(which $OVERRIDE_CXX)
           make test
