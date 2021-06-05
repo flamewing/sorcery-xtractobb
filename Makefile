@@ -55,6 +55,8 @@ REPACK_OBB_LIBS :=
 PRETTYJSON_LIBS :=
 JSON2INK_LIBS   :=
 
+.PHONY: all count clean test
+
 # Targets
 all: $(BIN)
 
@@ -70,8 +72,6 @@ test: all
 	cp tests/gold/*.json tests/input
 	./pretty-print-json -w $$(ls -1 tests/input/*.json)
 	diff -ru tests/gold tests/input || echo "Test failed"
-
-.PHONY: all count clean test
 
 .SUFFIXES:
 .SUFFIXES:	.c .cc .C .cpp .o .yy .ll .h .hh
@@ -95,19 +95,13 @@ driver.o: parser.cc parser.hh
 
 scanner.o: parser.cc parser.hh
 
-parser.d: parser.cc
-
-scanner.d: scanner.cc
-
-parser.hh: parser.cc
-
-parser.cc: parser.yy
+%.cc: %.yy
 	$(YACC) -Wno-yacc -d -o parser.cc parser.yy
-	for ff in parser.cc parser.hh location.hh position.hh stack.hh ; do \
+	for ff in parser.cc parser.hh location.hh ; do \
 		sed -ri 's%(^.*[^\\*]$$)%\1// NOLINT%' $$ff; \
 	done
 
-scanner.cc: scanner.ll
+%.cc: %.ll
 	$(LEXER) --outfile=scanner.cc scanner.ll
 	sed -ri 's%(^.*[^\\*]$$)%\1// NOLINT%' scanner.cc
 

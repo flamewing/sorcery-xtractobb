@@ -18,7 +18,7 @@
 %}
 
 %skeleton "lalr1.cc"
-%require "3.0.4"
+%require "3.2"
 %defines
 
 %define api.token.constructor
@@ -194,12 +194,15 @@
 %type <std::string> varName      "variable name"
 %type <std::string> varValue     "variable value"
 %type <std::string> strings
+/*
 %type <std::string> functionName "function name"
 %type <std::string> JsonValueSimple
+*/
 
 %type <std::vector<GlobalVariableStatement>> varList "global variable list"
 %type <GlobalVariableStatement>              varDecl "variable declaration"
 
+/*
 %type <std::vector<nonstd::polymorphic_value<TopLevelStatement>>> functionList "function list"
 %type <nonstd::polymorphic_value<TopLevelStatement>>              function     "function definition"
 
@@ -217,6 +220,7 @@
 %type <BinaryOps>  binaryOps     "binary mathematical operations"
 
 %type <bool> JsonMapValueListOpt JsonArrayValueListOpt
+*/
 
 %%
 %start unit;
@@ -393,7 +397,6 @@ optElse
         {   $$ = make_polymorphic_value<Statement, ElseStatement>(
                 std::move($7), std::move($10), declare_variable($7, true, false, drv)); }
     ;
-*/
 
 unaryOps
     : LOG
@@ -532,7 +535,7 @@ JsonMap
 JsonMapValueListOpt
     : JsonMapValueList
         {   $$ = false; }
-    | /* empty */
+    | // empty
         {   $$ = true; }
     ;
 
@@ -584,7 +587,7 @@ JsonArray
 JsonArrayValueListOpt
     : JsonArrayValueList
         {   $$ = false; }
-    | /* empty */
+    | // empty
         {   $$ = true; }
     ;
 
@@ -622,6 +625,7 @@ JsonValueSimple
     | strings
         {   $$ = '"' + escapeString($1) + '"'; }
     ;
+*/
 
 %%
 
