@@ -18,18 +18,18 @@
 #ifndef STATEMENT_HH
 #define STATEMENT_HH
 
-#include <experimental/iterator>
+#include "expression.hh"
+#include "polymorphic_value.hh"
+#include "util.hh"
+
 #include <algorithm>
+#include <experimental/iterator>
 #include <map>
 #include <ostream>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include "expression.hh"
-#include "polymorphic_value.hh"
-#include "util.hh"
 
 class driver;
 
@@ -45,7 +45,7 @@ public:
     auto operator=(Statement&&) noexcept -> Statement& = default;
 
     auto write(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& {
+            -> std::ostream& {
         return write_impl(out, indent);
     }
     [[nodiscard]] static auto getIndent(size_t indent) -> std::string {
@@ -59,7 +59,7 @@ private:
 
 protected:
     virtual auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& {
+            -> std::ostream& {
         ignore_unused_variable_warning(indent);
         return out;
     }
@@ -73,7 +73,7 @@ public:
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         return out << getIndent(indent) << content << '\n';
     }
 
@@ -86,12 +86,12 @@ class ChoiceStatement : public Statement {
 public:
     ChoiceStatement() = default;
     explicit ChoiceStatement(
-        std::string text, nonstd::polymorphic_value<Expression> cond = {})
-        : content(std::move(text)), condition(std::move(cond)) {}
+            std::string text, nonstd::polymorphic_value<Expression> cond = {})
+            : content(std::move(text)), condition(std::move(cond)) {}
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         out << getIndent(indent) << "* ";
         if (condition) {
             out << "{ ";
@@ -109,13 +109,14 @@ private:
 class AssignmentStatement : public Statement {
 public:
     explicit AssignmentStatement(
-        std::string name, nonstd::polymorphic_value<Expression> expr, bool decl)
-        : varName(std::move(name)), expression(std::move(expr)), declare(decl) {
-    }
+            std::string name, nonstd::polymorphic_value<Expression> expr,
+            bool decl)
+            : varName(std::move(name)), expression(std::move(expr)),
+              declare(decl) {}
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         out << getIndent(indent) << "~ ";
         if (declare) {
             out << "temp ";
@@ -135,11 +136,11 @@ class ExpressionStatement : public Statement {
 public:
     ExpressionStatement() = default;
     explicit ExpressionStatement(nonstd::polymorphic_value<Expression> expr)
-        : expression(std::move(expr)) {}
+            : expression(std::move(expr)) {}
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         out << getIndent(indent) << "~ ";
         return expression->write(out, false) << '\n';
     }
@@ -153,11 +154,11 @@ class ReturnStatement : public Statement {
 public:
     ReturnStatement() = default;
     explicit ReturnStatement(nonstd::polymorphic_value<Expression> expr)
-        : expression(std::move(expr)) {}
+            : expression(std::move(expr)) {}
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         out << getIndent(indent) << "~ return ";
         return expression->write(out, false) << '\n';
     }
@@ -178,11 +179,13 @@ public:
     void steal_statements(StatementList& other) noexcept {
         statements.swap(other);
     }
-    auto get_statements() noexcept -> StatementList& { return statements; }
+    auto get_statements() noexcept -> StatementList& {
+        return statements;
+    }
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         for (auto const& elem : statements) {
             elem->write(out, indent);
         }
@@ -200,7 +203,7 @@ public:
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         out << getIndent(indent) << "- else:\n";
         return BlockStatement::write_impl(out, indent + 4);
     }
@@ -211,19 +214,19 @@ class IfStatement : public Statement {
 public:
     IfStatement() = default;
     IfStatement(
-        nonstd::polymorphic_value<Expression> cond,
-        nonstd::polymorphic_value<Statement>  then)
-        : condExpr(std::move(cond)), thenStmt(std::move(then)) {}
+            nonstd::polymorphic_value<Expression> cond,
+            nonstd::polymorphic_value<Statement>  then)
+            : condExpr(std::move(cond)), thenStmt(std::move(then)) {}
     IfStatement(
-        nonstd::polymorphic_value<Expression> cond,
-        nonstd::polymorphic_value<Statement>  then,
-        nonstd::polymorphic_value<Statement>  else_)
-        : condExpr(std::move(cond)), thenStmt(std::move(then)),
-          elseStmt(std::move(else_)) {}
+            nonstd::polymorphic_value<Expression> cond,
+            nonstd::polymorphic_value<Statement>  then,
+            nonstd::polymorphic_value<Statement>  else_)
+            : condExpr(std::move(cond)), thenStmt(std::move(then)),
+              elseStmt(std::move(else_)) {}
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         out << getIndent(indent) << "- ";
         condExpr->write(out, false) << "\n";
         thenStmt->write(out, indent + 4);
@@ -244,7 +247,7 @@ class GlobalVariableStatement final : public Statement {
 public:
     GlobalVariableStatement() noexcept = default;
     explicit GlobalVariableStatement(std::string name, std::string value)
-        : varName(std::move(name)), varValue(std::move(value)) {
+            : varName(std::move(name)), varValue(std::move(value)) {
         add_global(varName);
     }
 
@@ -261,7 +264,7 @@ private:
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& final {
+            -> std::ostream& final {
         ignore_unused_variable_warning(indent);
         return out << "VAR " << varName << " = " << varValue << '\n';
     }
@@ -276,7 +279,7 @@ class TopLevelStatement : public BlockStatement {
 public:
     TopLevelStatement() noexcept = default;
     TopLevelStatement(std::string name_, driver& drv_)
-        : drv(&drv_), name(std::move(name_)) {}
+            : drv(&drv_), name(std::move(name_)) {}
     [[nodiscard]] auto getName() const noexcept -> std::string const& {
         return name;
     }
@@ -312,12 +315,12 @@ protected:
         return out;
     }
     virtual auto write_header(std::ostream& out) const noexcept
-        -> std::ostream& {
+            -> std::ostream& {
         return out;
     }
 
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         write_header(out);
         return BlockStatement::write_impl(out, indent) << '\n';
     }
@@ -347,7 +350,9 @@ private:
 class KnotStatement final : public TopLevelStatement {
 public:
     KnotStatement() noexcept = default;
-    KnotStatement(std::string const& name_, driver& drv_) { init(name_, drv_); }
+    KnotStatement(std::string const& name_, driver& drv_) {
+        init(name_, drv_);
+    }
 
     void add_stitch(nonstd::polymorphic_value<StitchStatement> stitch) {
         if (stitch->getName() == getName()) {
@@ -365,7 +370,7 @@ private:
 
 protected:
     auto write_impl(std::ostream& out, size_t indent) const noexcept
-        -> std::ostream& final {
+            -> std::ostream& final {
         write_header(out);
         TopLevelStatement::write_impl(out, indent) << '\n';
         for (auto const& elem : stitches) {

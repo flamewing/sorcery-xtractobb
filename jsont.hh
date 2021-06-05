@@ -128,17 +128,13 @@ namespace jsont {
     // ------------------- internal ---------------------
 
     inline Tokenizer::Tokenizer(const char* bytes, size_t length) noexcept
-            : _offset(0)
-            , _token(End)
-            , _error(UnspecifiedError) {
+            : _offset(0), _token(End), _error(UnspecifiedError) {
         initConverter();
         reset(bytes, length);
     }
 
     inline Tokenizer::Tokenizer(std::string_view slice) noexcept
-            : _offset(0)
-            , _token(End)
-            , _error(UnspecifiedError) {
+            : _offset(0), _token(End), _error(UnspecifiedError) {
         initConverter();
         reset(slice);
     }

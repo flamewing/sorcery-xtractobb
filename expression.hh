@@ -18,11 +18,11 @@
 #ifndef EXPRESSION_HH
 #define EXPRESSION_HH
 
-#include <ostream>
-#include <string>
-
 #include "polymorphic_value.hh"
 #include "util.hh"
+
+#include <ostream>
+#include <string>
 
 class Expression {
 public:
@@ -35,7 +35,7 @@ public:
     auto operator=(Expression&&) noexcept -> Expression& = default;
 
     auto write(std::ostream& out, bool needParens) const noexcept
-        -> std::ostream& {
+            -> std::ostream& {
         if (needParens && !is_simple()) {
             out << '(';
             return write_impl(out) << ')';
@@ -60,7 +60,7 @@ public:
 
 protected:
     auto write_impl(std::ostream& out) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         return out << '"' << content << '"';
     }
 
@@ -74,7 +74,7 @@ public:
 
 private:
     auto write_impl(std::ostream& out) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         return out << "  -> " << target;
     }
     std::string target;
@@ -83,11 +83,11 @@ private:
 class VariableRValueExpression : public Expression {
 public:
     explicit VariableRValueExpression(std::string name)
-        : varName(std::move(name)) {}
+            : varName(std::move(name)) {}
 
 private:
     auto write_impl(std::ostream& out) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         return out << varName;
     }
     std::string varName;
@@ -96,11 +96,11 @@ private:
 class VariableLValueExpression : public Expression {
 public:
     explicit VariableLValueExpression(std::string name)
-        : varName(std::move(name)) {}
+            : varName(std::move(name)) {}
 
 private:
     auto write_impl(std::ostream& out) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         return out << varName;
     }
     std::string varName;
@@ -118,11 +118,11 @@ enum class UnaryOps : uint8_t {
 class UnaryOpExpression : public Expression {
 public:
     UnaryOpExpression(UnaryOps kind, nonstd::polymorphic_value<Expression> ex)
-        : oper(kind), expr(std::move(ex)) {}
+            : oper(kind), expr(std::move(ex)) {}
 
 private:
     auto write_impl(std::ostream& out) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         switch (oper) {
         case UnaryOps::Log10:
             out << "Log10(";
@@ -149,11 +149,11 @@ enum class PostfixOps : uint8_t { Increment, Decrement };
 class PostfixOpExpression : public Expression {
 public:
     PostfixOpExpression(PostfixOps kind, VariableLValueExpression var)
-        : oper(kind), variable(std::move(var)) {}
+            : oper(kind), variable(std::move(var)) {}
 
 private:
     auto write_impl(std::ostream& out) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         if (oper == PostfixOps::Increment) {
             return variable.write(out, false) << "++\n";
         }
@@ -182,16 +182,16 @@ enum class BinaryOps : uint8_t {
 class BinaryOpExpression : public Expression {
 public:
     BinaryOpExpression(
-        BinaryOps kind, nonstd::polymorphic_value<Expression> ll,
-        nonstd::polymorphic_value<Expression> rr)
-        : oper(kind), lhs(std::move(ll)), rhs(std::move(rr)) {}
+            BinaryOps kind, nonstd::polymorphic_value<Expression> ll,
+            nonstd::polymorphic_value<Expression> rr)
+            : oper(kind), lhs(std::move(ll)), rhs(std::move(rr)) {}
     [[nodiscard]] auto is_simple() const noexcept -> bool override {
         return false;
     }
 
 private:
     auto write_impl(std::ostream& out) const noexcept
-        -> std::ostream& override {
+            -> std::ostream& override {
         lhs->write(out, true);
         switch (oper) {
         case BinaryOps::Add:

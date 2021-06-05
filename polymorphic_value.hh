@@ -38,14 +38,18 @@ namespace nonstd {
 
         template <class T>
         struct default_copy {
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto operator()(const T& t) const -> T* { return new T(t); }
+            auto operator()(const T& t) const -> T* {
+                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+                return new T(t);
+            }
         };
 
         template <class T>
         struct default_delete {
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            void operator()(const T* t) const { delete t; }
+            void operator()(const T* t) const {
+                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+                delete t;
+            }
         };
 
         template <class T>
@@ -56,10 +60,11 @@ namespace nonstd {
             control_block(control_block&&) noexcept = default;
 
             auto operator=(control_block const&) -> control_block& = default;
-            auto operator=(control_block&&) noexcept -> control_block& = default;
+            auto operator             =(control_block&&) noexcept
+                    -> control_block& = default;
 
             [[nodiscard]] virtual auto clone() const
-                -> std::unique_ptr<control_block> = 0;
+                    -> std::unique_ptr<control_block> = 0;
 
             virtual auto ptr() -> T* = 0;
         };
@@ -72,38 +77,42 @@ namespace nonstd {
         public:
             template <class... Ts>
             explicit direct_control_block(Ts&&... ts)
-                : u_(U(std::forward<Ts>(ts)...)) {}
+                    : u_(U(std::forward<Ts>(ts)...)) {}
 
             [[nodiscard]] auto clone() const
-                -> std::unique_ptr<control_block<T>> override {
+                    -> std::unique_ptr<control_block<T>> override {
                 return std::make_unique<direct_control_block>(*this);
             }
 
-            auto ptr() -> T* override { return std::addressof(u_); }
+            auto ptr() -> T* override {
+                return std::addressof(u_);
+            }
         };
 
         template <
-            class T, class U, class C = default_copy<U>,
-            class D = default_delete<U>>
+                class T, class U, class C = default_copy<U>,
+                class D = default_delete<U>>
         class pointer_control_block final : public control_block<T>, public C {
             std::unique_ptr<U, D> p_;
 
         public:
             explicit pointer_control_block(U* u, C c = C{}, D d = D{})
-                : C(std::move(c)), p_(u, std::move(d)) {}
+                    : C(std::move(c)), p_(u, std::move(d)) {}
 
             explicit pointer_control_block(std::unique_ptr<U, D> p, C c = C{})
-                : C(std::move(c)), p_(std::move(p)) {}
+                    : C(std::move(c)), p_(std::move(p)) {}
 
             auto clone() const -> std::unique_ptr<control_block<T>> override {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
                 assert(p_);
                 return std::make_unique<pointer_control_block>(
-                    C::operator()(*p_), static_cast<const C&>(*this),
-                    p_.get_deleter());
+                        C::operator()(*p_), static_cast<const C&>(*this),
+                        p_.get_deleter());
             }
 
-            auto ptr() -> T* override { return p_.get(); }
+            auto ptr() -> T* override {
+                return p_.get();
+            }
         };
 
         template <class T, class U>
@@ -112,18 +121,20 @@ namespace nonstd {
 
         public:
             explicit delegating_control_block(
-                std::unique_ptr<control_block<U>> b)
-                : delegate_(std::move(b)) {}
+                    std::unique_ptr<control_block<U>> b)
+                    : delegate_(std::move(b)) {}
 
             auto clone() const -> std::unique_ptr<control_block<T>> override {
                 return std::make_unique<delegating_control_block>(
-                    delegate_->clone());
+                        delegate_->clone());
             }
 
-            auto ptr() -> T* override { return delegate_->ptr(); }
+            auto ptr() -> T* override {
+                return delegate_->ptr();
+            }
         };
 
-    } // end namespace detail
+    }    // end namespace detail
 
     class bad_polymorphic_value_construction : std::exception {
     public:
@@ -145,8 +156,8 @@ namespace nonstd {
     struct is_polymorphic_value<polymorphic_value<T>> : std::true_type {};
 
     template <class T>
-    constexpr inline bool const is_polymorphic_value_v =
-        is_polymorphic_value<T>::value;
+    constexpr inline bool const is_polymorphic_value_v
+            = is_polymorphic_value<T>::value;
 
     ////////////////////////////////////////////////////////////////////////////////
     // `polymorphic_value` class definition
@@ -185,23 +196,24 @@ namespace nonstd {
         constexpr polymorphic_value() noexcept = default;
 
         template <
-            class U, class C = detail::default_copy<U>,
-            class D = detail::default_delete<U>,
-            class V = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+                class U, class C = detail::default_copy<U>,
+                class D = detail::default_delete<U>,
+                class V = std::enable_if_t<std::is_convertible_v<U*, T*>>>
         explicit polymorphic_value(U* u, C copier = C{}, D deleter = D{}) {
             if (!u) {
                 return;
             }
 
-            if (std::is_same_v<D, detail::default_delete<U>> &&
-                std::is_same_v<C, detail::default_copy<U>> &&
-                typeid(*u) != typeid(U)) {
+            if (std::is_same_v<
+                        D,
+                        detail::default_delete<
+                                U>> && std::is_same_v<C, detail::default_copy<U>> && typeid(*u) != typeid(U)) {
                 throw bad_polymorphic_value_construction();
             }
             std::unique_ptr<U, D> p(u, std::move(deleter));
 
             cb_ = std::make_unique<detail::pointer_control_block<T, U, C, D>>(
-                std::move(p), std::move(copier));
+                    std::move(p), std::move(copier));
             ptr_ = u;
         }
 
@@ -233,24 +245,24 @@ namespace nonstd {
         //
 
         template <
-            class U,
-            class V = std::enable_if_t<
-                !std::is_same_v<T, U> && std::is_convertible_v<U*, T*>>>
+                class U,
+                class V = std::enable_if_t<
+                        !std::is_same_v<T, U> && std::is_convertible_v<U*, T*>>>
         explicit polymorphic_value(const polymorphic_value<U>& p) {
             polymorphic_value<U> tmp(p);
             ptr_ = tmp.ptr_;
             cb_  = std::make_unique<detail::delegating_control_block<T, U>>(
-                std::move(tmp.cb_));
+                    std::move(tmp.cb_));
         }
 
         template <
-            class U,
-            class V = std::enable_if_t<
-                !std::is_same_v<T, U> && std::is_convertible_v<U*, T*>>>
+                class U,
+                class V = std::enable_if_t<
+                        !std::is_same_v<T, U> && std::is_convertible_v<U*, T*>>>
         explicit polymorphic_value(polymorphic_value<U>&& p) {
             ptr_ = p.ptr_;
             cb_  = std::make_unique<detail::delegating_control_block<T, U>>(
-                std::move(p.cb_));
+                    std::move(p.cb_));
             p.ptr_ = nullptr;
         }
 
@@ -259,13 +271,15 @@ namespace nonstd {
         //
 
         template <
-            class U, class V = std::enable_if_t<
-                         std::is_convertible_v<std::decay_t<U>*, T*> &&
-                         !is_polymorphic_value_v<std::decay_t<U>>>>
+                class U,
+                class V = std::enable_if_t<
+                        std::is_convertible_v<
+                                std::decay_t<U>*,
+                                T*> && !is_polymorphic_value_v<std::decay_t<U>>>>
         explicit polymorphic_value(U&& u)
-            : cb_(std::make_unique<
-                  detail::direct_control_block<T, std::decay_t<U>>>(
-                  std::forward<U>(u))) {
+                : cb_(std::make_unique<
+                        detail::direct_control_block<T, std::decay_t<U>>>(
+                        std::forward<U>(u))) {
             ptr_ = cb_->ptr();
         }
 
@@ -319,9 +333,11 @@ namespace nonstd {
         // Observers
         //
 
-        explicit operator bool() const { return static_cast<bool>(cb_); }
+        explicit operator bool() const {
+            return static_cast<bool>(cb_);
+        }
 
-        __attribute__((pure)) auto operator-> () const -> const T* {
+        __attribute__((pure)) auto operator->() const -> const T* {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
             assert(ptr_);
             return ptr_;
@@ -333,7 +349,7 @@ namespace nonstd {
             return *ptr_;
         }
 
-        __attribute__((pure)) auto operator-> () -> T* {
+        __attribute__((pure)) auto operator->() -> T* {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
             assert(*this);
             return ptr_;
@@ -353,7 +369,7 @@ namespace nonstd {
     auto make_polymorphic_value(Ts&&... ts) -> polymorphic_value<T> {
         polymorphic_value<T> p;
         p.cb_ = std::make_unique<detail::direct_control_block<T, T>>(
-            std::forward<Ts>(ts)...);
+                std::forward<Ts>(ts)...);
         p.ptr_ = p.cb_->ptr();
         return std::move(p);
     }
@@ -361,7 +377,7 @@ namespace nonstd {
     auto make_polymorphic_value(Ts&&... ts) -> polymorphic_value<T> {
         polymorphic_value<T> p;
         p.cb_ = std::make_unique<detail::direct_control_block<T, U>>(
-            std::forward<Ts>(ts)...);
+                std::forward<Ts>(ts)...);
         p.ptr_ = p.cb_->ptr();
         return std::move(p);
     }
@@ -373,6 +389,6 @@ namespace nonstd {
     void swap(polymorphic_value<T>& t, polymorphic_value<T>& u) noexcept {
         t.swap(u);
     }
-} // namespace nonstd
+}    // namespace nonstd
 
 #endif

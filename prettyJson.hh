@@ -24,6 +24,7 @@ enum PrettyJSON { eNO_WHITESPACE = -1, ePRETTY = 0, eCOMPACT = 1 };
 
 #include <boost/interprocess/streams/vectorstream.hpp>
 #include <boost/iostreams/filter/aggregate.hpp>
+
 #include <iostream>
 
 using vectorstream = boost::interprocess::basic_vectorstream<std::vector<char>>;
@@ -132,8 +133,7 @@ public:
     using category  = typename base_type::category;
 
     explicit basic_json_filter(PrettyJSON _pretty, size_t* _length = nullptr)
-            : pretty(_pretty)
-            , length(_length) {}
+            : pretty(_pretty), length(_length) {}
 
 private:
     using vector_type = typename base_type::vector_type;

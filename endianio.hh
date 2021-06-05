@@ -26,8 +26,8 @@
 
 // Utility to convert "fancy pointer" to pointer (ported from C++20).
 template <typename T>
-__attribute__((always_inline, const)) inline constexpr auto
-        to_address(T* in) noexcept -> T* {
+__attribute__((always_inline, const)) inline constexpr auto to_address(
+        T* in) noexcept -> T* {
     return in;
 }
 
@@ -249,10 +249,10 @@ namespace detail {
 template <typename T, detail::is_pointer_like_t<T> = true>
 __attribute__((always_inline)) inline auto Read4(T&& in) -> uint32_t {
     auto ptr{to_address(in)};
-    alignas(alignof(uint32_t)) std::array<uint8_t, sizeof(uint32_t)> buf{};
-    uint32_t                                                         val;
-    std::memcpy(buf.data(), ptr, sizeof(uint32_t));
-    std::memcpy(&val, buf.data(), sizeof(uint32_t));
+    alignas(alignof(uint32_t)) std::array<uint8_t, sizeof(uint32_t)> buffer{};
+    std::memcpy(buffer.data(), ptr, sizeof(uint32_t));
+    uint32_t val = 0;
+    std::memcpy(&val, buffer.data(), sizeof(uint32_t));
     std::advance(in, sizeof(uint32_t));
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     return val;
@@ -277,8 +277,8 @@ inline void Write4(T&& out, uint32_t val) {
 }
 
 inline void Write4(std::ostream& out, uint32_t val) {
-    alignas(alignof(uint32_t))
-            typename std::ostream::char_type buffer[sizeof(uint32_t)];
+    using oschar_t = std::ostream::char_type;
+    alignas(alignof(uint32_t)) std::array<oschar_t, sizeof(uint32_t)> buffer{};
     Write4(std::begin(buffer), val);
     out.write(std::cbegin(buffer), sizeof(uint32_t));
 }

@@ -1,53 +1,48 @@
-Checks: "-*\
-,bugprone-*\
-,-cert-dcl21-cpp\
-,cert-dcl50-cpp\
-,cert-env33-c\
-,cert-err34-c\
-,cert-err52-cpp\
-,cert-err60-cpp\
-,cert-flp30-c\
-,cert-msc50-cpp\
-,cert-msc51-cpp\
-,clang-diagnostic-*\
-,-clang-diagnostic-implicit-fallthrough\
-,-clang-diagnostic-weak-template-vtables\
-,clang-analyzer-*\
-,-clang-analyzer-alpha*\
-,cppcoreguidelines-*\
-,-cppcoreguidelines-avoid-c-arrays\
-,-cppcoreguidelines-pro-bounds-array-to-pointer-decay\
-,-cppcoreguidelines-pro-bounds-constant-array-index\
-,-cppcoreguidelines-macro-usage\
-,-cppcoreguidelines-pro-type-reinterpret-cast\
-,-cppcoreguidelines-pro-type-union-access\
-,-cppcoreguidelines-pro-bounds-pointer-arithmetic\
-,-cppcoreguidelines-pro-type-vararg\
-,-cppcoreguidelines-avoid-magic-numbers\
-,google-build-using-namespace\
-,google-explicit-constructor\
-,google-global-names-in-headers\
-,google-readability-casting\
-,google-runtime-int\
-,google-runtime-operator\
-,hicpp-*\
-,-hicpp-avoid-c-arrays\
-,-hicpp-exception-baseclass\
-,-hicpp-no-array-decay\
-,-hicpp-signed-bitwise\
-,-hicpp-vararg\
-,misc-*\
-,modernize-*\
-,-modernize-avoid-c-arrays\
-,performance-*\
-,readability-*\
-,-readability-named-parameter\
-,-readability-magic-numbers"
+Checks: "-*,
+bugprone-*,
+cert-dcl50-cpp,
+cert-env33-c,
+cert-err34-c,
+cert-err52-cpp,
+cert-err60-cpp,
+cert-flp30-c,
+cert-msc50-cpp,
+cert-msc51-cpp,
+clang-diagnostic-*,
+clang-analyzer-*,
+clang-analyzer-alpha*,
+cppcoreguidelines-*,
+-cppcoreguidelines-avoid-magic-numbers,
+-cppcoreguidelines-avoid-non-const-global-variables,
+-cppcoreguidelines-init-variables,
+-cppcoreguidelines-macro-usage,
+-cppcoreguidelines-pro-bounds-constant-array-index,
+-cppcoreguidelines-pro-type-reinterpret-cast,
+-cppcoreguidelines-pro-type-union-access,
+-cppcoreguidelines-pro-type-vararg,
+-cppcoreguidelines-pro-bounds-pointer-arithmetic,
+google-build-using-namespace,
+google-explicit-constructor,
+google-global-names-in-headers,
+google-readability-casting,
+google-runtime-int,
+google-runtime-operator,
+hicpp-*,
+-hicpp-exception-baseclass,
+-hicpp-named-parameter,
+-hicpp-vararg,
+misc-*,
+modernize-*,
+-modernize-use-trailing-return-type,
+performance-*,
+readability-*,
+-readability-magic-numbers,
+-readability-named-parameter"
 CheckOptions:
     - key: bugprone-argument-comment.StrictMode
       value: 1
-    - key: bugprone-exception-escape.FunctionsThatShouldNotThrow
-      value: WinMain,SDL_main
     - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
       value: 1
+    - key: bugprone-signed-char-misuse.CharTypdefsToIgnore
+      value: 'int8_t'
 FormatStyle: 'file'

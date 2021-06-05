@@ -19,8 +19,6 @@
 #include "jsont.hh"
 #include "prettyJson.hh"
 
-#include <algorithm>
-#include <array>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/interprocess/streams/bufferstream.hpp>
@@ -33,6 +31,9 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/serialization/vector.hpp>
+
+#include <algorithm>
+#include <array>
 #include <cstdio>
 #include <cstring>
 #include <iomanip>
@@ -47,8 +48,8 @@
 using std::allocator;
 using std::cerr;
 using std::cout;
-using std::exception;
 using std::endl;
+using std::exception;
 using std::flush;
 using std::ios;
 using std::istream;
@@ -100,12 +101,13 @@ public:
             : inkContent(_inkContent) {}
 
 private:
-    decltype(auto) printValueRaw(vectorstream& sint, jsont::Tokenizer& reader) {
+    auto printValueRaw(vectorstream& sint, jsont::Tokenizer& reader)
+            -> decltype(auto) {
         return sint << reader.dataValue();
     }
 
-    decltype(auto)
-            printValueObject(vectorstream& sint, jsont::Tokenizer& reader) {
+    auto printValueObject(vectorstream& sint, jsont::Tokenizer& reader)
+            -> decltype(auto) {
         return sint << reader.dataValue() << ':';
     }
 
@@ -145,8 +147,8 @@ private:
                     ibufferstream sptr(
                             slice.data(), slice.length(),
                             ios::in | ios::binary);
-                    unsigned offset;
-                    unsigned length;
+                    unsigned offset = 0;
+                    unsigned length = 0;
                     sptr >> offset >> length;
                     string_view stitch(inkContent.substr(offset, length));
 
@@ -333,7 +335,7 @@ auto main(int argc, char* argv[]) -> int {
         vector<XFile_entry> entries;
         entries.reserve((oggview.size() - htbl) / XFile_entry::EntrySize);
 
-        for (auto it = oggview.cbegin() + htbl; it != oggview.cend();
+        for (const auto* it = oggview.cbegin() + htbl; it != oggview.cend();
              it += XFile_entry::EntrySize) {
             entries.emplace_back(it, oggview);
             // TODO: These should be obtained by name from OBB wrapper when

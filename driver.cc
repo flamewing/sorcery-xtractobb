@@ -34,8 +34,7 @@
 #include "parser.hh"
 #pragma GCC diagnostic pop
 
-driver::driver(std::ostream& out_)
-        : out(out_) {}
+driver::driver(std::ostream& out_) : out(out_) {}
 
 auto driver::parse(const std::string& f) -> int {
     file = f;

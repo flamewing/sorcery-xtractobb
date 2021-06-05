@@ -19,8 +19,6 @@
 #include "jsont.hh"
 #include "prettyJson.hh"
 
-#include <algorithm>
-#include <array>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/interprocess/streams/bufferstream.hpp>
@@ -33,6 +31,9 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/serialization/vector.hpp>
+
+#include <algorithm>
+#include <array>
 #include <cstdio>
 #include <cstring>
 #include <iomanip>
@@ -104,15 +105,16 @@ public:
 
     explicit basic_json_unstitch_filter(
             filtering_ostream& _inkContent, string _inkFileName)
-            : inkContent(_inkContent)
-            , inkFileName(std::move(_inkFileName)) {}
+            : inkContent(_inkContent), inkFileName(std::move(_inkFileName)) {}
 
 private:
-    decltype(auto) printValueRaw(ostream& sint, jsont::Tokenizer& reader) {
+    auto printValueRaw(ostream& sint, jsont::Tokenizer& reader)
+            -> decltype(auto) {
         return sint << reader.dataValue();
     }
 
-    decltype(auto) printValueObject(ostream& sint, jsont::Tokenizer& reader) {
+    auto printValueObject(ostream& sint, jsont::Tokenizer& reader)
+            -> decltype(auto) {
         return sint << reader.dataValue() << ':';
     }
 

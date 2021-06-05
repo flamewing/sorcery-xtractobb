@@ -20,6 +20,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/iostreams/stream.hpp>
+
 #include <iostream>
 #include <string_view>
 #include <vector>
@@ -63,23 +64,27 @@ auto main(int argc, char* argv[]) -> int {
         return eWRONG_ARGC;
     }
 
-    PrettyJSON        pretty;
     string_view const type(argv[1]);
     if (type == "-h"sv) {
         usage(cout, program);
         return eOK;
     }
-    if (type == "-p"sv) {
-        pretty = ePRETTY;
-    } else if (type == "-w"sv) {
-        pretty = eNO_WHITESPACE;
-    } else if (type == "-c"sv) {
-        pretty = eCOMPACT;
-    } else {
+
+    if (type != "-p"sv && type != "-w"sv && type != "-c"sv) {
         cerr << "First parameter must be '-h', '-p', '-c' or '-w'!"sv << endl
              << endl;
         return eINVALID_ARGS;
     }
+
+    PrettyJSON const pretty = [type]() {
+        if (type == "-p"sv) {
+            return ePRETTY;
+        }
+        if (type == "-w"sv) {
+            return eNO_WHITESPACE;
+        }
+        return eCOMPACT;
+    }();
 
     unsigned num_errors = 0;
     for (int ii = 2; ii < argc; ii++) {

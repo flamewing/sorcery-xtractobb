@@ -22,6 +22,7 @@
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+
 #include <string_view>
 
 struct File_data {
@@ -55,9 +56,9 @@ struct Basic_File_entry {
 
 private:
     friend class boost::serialization::access;
-    static auto
-            getData(std::string_view::const_iterator& it,
-                    std::string_view oggview) noexcept -> std::string_view {
+    static auto getData(
+            std::string_view::const_iterator& it,
+            std::string_view oggview) noexcept -> std::string_view {
         uint32_t ptr = Read4(it);
         uint32_t len = Read4(it);
         return oggview.substr(ptr, len);
