@@ -71,7 +71,7 @@ test: all
 	mkdir -p tests/input
 	cp tests/gold/*.json tests/input
 	./pretty-print-json -w $$(ls -1 tests/input/*.json)
-	diff -ru tests/gold tests/input || echo "Test failed"
+	diff -bru tests/gold tests/input || echo "Test failed"
 
 .SUFFIXES:
 .SUFFIXES:	.c .cc .C .cpp .o .yy .ll .h .hh
