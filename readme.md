@@ -1,10 +1,21 @@
 # Badges
 
-[![Build Status](https://img.shields.io/travis/flamewing/sorcery-xtractobb/master.svg?logo=travis)](https://travis-ci.org/flamewing/sorcery-xtractobb)
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/13717/badge.svg)](https://scan.coverity.com/projects/13717)
-[![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/flamewing/sorcery-xtractobb?logo=CodeFactor&logoColor=white)](https://www.codefactor.io/repository/github/flamewing/sorcery-xtractobb)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/flamewing/sorcery-xtractobb.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/flamewing/sorcery-xtractobb/alerts/)
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/flamewing/sorcery-xtractobb.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/flamewing/sorcery-xtractobb/context:cpp)
+[![JSONT License: MIT](https://img.shields.io/badge/JSONT%20License-MIT-blue.svg)](https://tldrlegal.com/license/mit)
+[![Other License: GPL v3](https://img.shields.io/badge/Other%20License-GPL%20v3-orange.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+[![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/flamewing/sorcery-xtractobb?label=codefactor&logo=codefactor&logoColor=white)](https://www.codefactor.io/repository/github/flamewing/sorcery-xtractobb)
+[![LGTM Alerts](https://img.shields.io/lgtm/alerts/github/flamewing/sorcery-xtractobb?logo=LGTM)](https://lgtm.com/projects/g/flamewing/sorcery-xtractobb/alerts/)
+[![LGTM Grade](https://img.shields.io/lgtm/grade/cpp/github/flamewing/sorcery-xtractobb?logo=LGTM)](https://lgtm.com/projects/g/flamewing/sorcery-xtractobb/context:cpp)
+
+[![CI Mac OS Catalina 10.15](https://img.shields.io/github/workflow/status/flamewing/sorcery-xtractobb/ci-macos?label=CI%20Mac%20OS%20X&logo=Apple&logoColor=white)](https://github.com/flamewing/sorcery-xtractobb/actions?query=workflow%3Aci-macos)
+[![CI Ubuntu 20.04](https://img.shields.io/github/workflow/status/flamewing/sorcery-xtractobb/ci-linux?label=CI%20Ubuntu&logo=Ubuntu&logoColor=white)](https://github.com/flamewing/sorcery-xtractobb/actions?query=workflow%3Aci-linux)
+[![CI Windows Server 2019](https://img.shields.io/github/workflow/status/flamewing/sorcery-xtractobb/ci-windows?label=CI%20Windows&logo=Windows&logoColor=white)](https://github.com/flamewing/sorcery-xtractobb/actions?query=workflow%3Aci-windows)
+
+[![Coverity Scan Analysis](https://img.shields.io/github/workflow/status/flamewing/sorcery-xtractobb/coverity-scan?label=Coverity%20Scan%20Analysis&logo=data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjU2IDI1MiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjYuOTUgMTA5LjA4bC0zLjUyLTkuNDUgMzcuOTYgNzAuODloLjg1bDQ3LjMzLTExOC4xM2MuODMtMi41NiA4LjI2LTIxLjc0IDguNTEtMzAuMi42My0yMS44NC0xNC4xLTIzLjgxLTI5Ljc3LTE5LjM5QzM2Ljg3IDE5LjQ2LS4yNCA2Ny44My4wMSAxMjQuNzhjLjIgNTIuOTcgMzIuNjQgOTguMjQgNzguNjUgMTE3LjM4TDI2Ljk1IDEwOS4wOE0xNzQuMzMgNS40OGMtNi4zMiAxMi43LTEzLjEgMjYuMzctMjEuNjggNDguMDhMNzkuMjIgMjQyLjM5YzE1LjA5IDYuMiAzMS42MyA5LjYgNDguOTYgOS41MiA3MC41LS4yNyAxMjcuNDItNTcuNjcgMTI3LjEzLTEyOC4xOC0uMjItNTMuODMtMzMuNzYtOTkuNy04MC45OC0xMTguMjYiIGZpbGw9IiNmZmYiLz48L3N2Zz4=)](https://github.com/flamewing/sorcery-xtractobb/actions?query=workflow%3Acoverity-scan)
+[![Coverity Scan](https://img.shields.io/coverity/scan/13717?label=Coverity%20Scan%20Results&logo=data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjU2IDI1MiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjYuOTUgMTA5LjA4bC0zLjUyLTkuNDUgMzcuOTYgNzAuODloLjg1bDQ3LjMzLTExOC4xM2MuODMtMi41NiA4LjI2LTIxLjc0IDguNTEtMzAuMi42My0yMS44NC0xNC4xLTIzLjgxLTI5Ljc3LTE5LjM5QzM2Ljg3IDE5LjQ2LS4yNCA2Ny44My4wMSAxMjQuNzhjLjIgNTIuOTcgMzIuNjQgOTguMjQgNzguNjUgMTE3LjM4TDI2Ljk1IDEwOS4wOE0xNzQuMzMgNS40OGMtNi4zMiAxMi43LTEzLjEgMjYuMzctMjEuNjggNDguMDhMNzkuMjIgMjQyLjM5YzE1LjA5IDYuMiAzMS42MyA5LjYgNDguOTYgOS41MiA3MC41LS4yNyAxMjcuNDItNTcuNjcgMTI3LjEzLTEyOC4xOC0uMjItNTMuODMtMzMuNzYtOTkuNy04MC45OC0xMTguMjYiIGZpbGw9IiNmZmYiLz48L3N2Zz4=)](https://scan.coverity.com/projects/flamewing-sorcery-xtractobb)
+
+[![Windows snapshot build](https://img.shields.io/github/workflow/status/flamewing/sorcery-xtractobb/snapshots-windows?label=Windows%20Snapshot%20build&logo=windows&logoColor=white)](https://github.com/flamewing/sorcery-xtractobb/actions?query=workflow%3Asnapshots-windows)
+[![Latest Windows snapshot](https://img.shields.io/github/release-date/flamewing/sorcery-xtractobb?label=Latest%20Windows%20snapshot&logo=windows&logoColor=white)](https://github.com/flamewing/sorcery-xtractobb/releases/latest)
 
 ## Inkle Sorcery! Extractor
 

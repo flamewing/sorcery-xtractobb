@@ -1,0 +1,69 @@
+name: ci-linux
+
+on:
+  push:
+    paths:
+      - '**'
+      - '!COPYING'
+      - '!COPYING-asm'
+      - '!INSTALL'
+      - '!**.md'
+      - '!.clang*'
+      - '!.gitignore'
+      - '!.gitattributes'
+      - '!.github/workflows/*'
+      - '.github/workflows/ci-linux.yml'
+  pull_request:
+    paths:
+      - '**'
+      - '!COPYING'
+      - '!COPYING-asm'
+      - '!INSTALL'
+      - '!**.md'
+      - '!.clang*'
+      - '!.gitignore'
+      - '!.gitattributes'
+      - '!.github/workflows/*'
+      - '.github/workflows/ci-linux.yml'
+
+jobs:
+  ci-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+        generator: [make, ninja]
+        include:
+          - compiler: gcc
+            cc: gcc
+            cxx: g++
+          - compiler: clang
+            cc: clang
+            cxx: clang++
+          - generator: make
+            cmake_generator: "Unix Makefiles"
+          - generator: ninja
+            cmake_generator: "Ninja"
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-fast update
+          sudo apt-fast install -y libboost-all-dev ninja-build
+      - name: Checkout code
+        uses: actions/checkout@master
+      - name: Build
+        env:
+          OVERRIDE_CC: ${{ matrix.cc }}
+          OVERRIDE_CXX: ${{ matrix.cxx }}
+        run: |
+          export CC=$(which $OVERRIDE_CC)
+          export CXX=$(which $OVERRIDE_CXX)
+          make -j2
+      - name: Test
+        env:
+          OVERRIDE_CC: ${{ matrix.cc }}
+          OVERRIDE_CXX: ${{ matrix.cxx }}
+        run: |
+          export CC=$(which $OVERRIDE_CC)
+          export CXX=$(which $OVERRIDE_CXX)
+          make test
