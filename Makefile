@@ -102,12 +102,12 @@ scanner.hh: scanner.cc
 %.cc: %.yy
 	$(YACC) -Wno-yacc -d -o parser.cc parser.yy
 	for ff in parser.cc parser.hh location.hh ; do \
-		sed -i 's%\(^.*[^\\*]$$\)%\1// NOLINT%' $$ff; \
+		sed -i.bak 's%\(^.*[^\\*]$$\)%\1// NOLINT%' $$ff && rm $$ff.bak; \
 	done
 
 %.cc: %.ll
 	$(LEXER) --outfile=scanner.cc scanner.ll
-	sed -i 's%\(^.*[^\\*]$$\)%\1// NOLINT%' scanner.cc
+	sed -i.bak 's%\(^.*[^\\*]$$\)%\1// NOLINT%' scanner.cc && rm scanner.cc.bak
 
 # Dependencies
 -include $(DEPENDENCIES)
