@@ -40,6 +40,7 @@ jobs:
         if: ${{ env.REPO_ALIVE == 'true' }}
         uses: actions/checkout@master
       - name: Build
+        if: ${{ env.REPO_ALIVE == 'true' }}
         run: make -j2
       - name: Create package
         if: ${{ env.REPO_ALIVE == 'true' }}
