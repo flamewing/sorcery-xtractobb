@@ -2,15 +2,15 @@ name: coverity-scan
 
 on:
   schedule:
-    - cron: "0 00 * * *" # Daily at 00:00 UTC
+    - cron: "0 04 * * *" # Daily at 00:00 UTC
   workflow_dispatch:
 
 env:
   TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
   EMAIL: ${{ secrets.COVERITY_SCAN_EMAIL }}
   SHA1: ${{ github.sha }}
-  FILE: mdtools-ubuntu-gcc.tgz
-  PROJ: flamewing/mdtools
+  FILE: sorcery-xtractobb-ubuntu-gcc.tgz
+  PROJ: flamewing/sorcery-xtractobb
 
 jobs:
   coverity-linux:
@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Activity check
         run: |
-          DATEUTC=$(curl -sL https://api.github.com/repos/flamewing/mdtools/commits | jq -r '[.[]][0]' | jq -r '.commit.committer.date')
+          DATEUTC=$(curl -sL https://api.github.com/repos/flamewing/sorcery-xtractobb/commits | jq -r '[.[]][0]' | jq -r '.commit.committer.date')
           TIMESTAMP=$(date --utc -d "$DATEUTC" +%s)
           DAYS=$(( ($(date --utc +%s) - $TIMESTAMP) / 86400 ))
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -32,26 +32,26 @@ jobs:
             fi
           fi
       - name: Install dependencies
-        if: ${{ env.REPO_ALIVE == 'true' }} == 'true'
+        if: ${{ env.REPO_ALIVE == 'true' }}
         run: |
           sudo apt-fast update
           sudo apt-fast install -y libboost-all-dev bison flex
       - name: Download Coverity Build Tool
-        if: ${{ env.REPO_ALIVE == 'true' }} == 'true'
+        if: ${{ env.REPO_ALIVE == 'true' }}
         run: |
           wget -q https://scan.coverity.com/download/Linux --post-data "token=$TOKEN&project=$PROJ" -O /tmp/cov-analysis-linux64.tar.gz
           mkdir /tmp/cov-analysis-linux64
           tar xzf /tmp/cov-analysis-linux64.tar.gz --strip 1 -C /tmp/cov-analysis-linux64
       - name: Checkout code
-        if: ${{ env.REPO_ALIVE == 'true' }} == 'true'
+        if: ${{ env.REPO_ALIVE == 'true' }}
         uses: actions/checkout@master
       - name: Build with cov-build
-        if: ${{ env.REPO_ALIVE == 'true' }} == 'true'
+        if: ${{ env.REPO_ALIVE == 'true' }}
         run: |
           export PATH=/tmp/cov-analysis-linux64/bin:$PATH
           cov-build --dir cov-int make -j2
       - name: Submit the result to Coverity Scan
-        if: ${{ env.REPO_ALIVE == 'true' }} == 'true'
+        if: ${{ env.REPO_ALIVE == 'true' }}
         run: |
           tar czvf $FILE cov-int
           curl \
