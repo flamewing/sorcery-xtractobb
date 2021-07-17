@@ -33,4 +33,4 @@ tests/input/*
 
 # Editor
 .clangd
-
+.vscode
