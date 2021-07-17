@@ -35,9 +35,7 @@ jobs:
         if: ${{ env.REPO_ALIVE == 'true' }}
         run: |
           sudo apt-fast update
-          sudo apt-fast install -y libboost-all-dev bison flex
-          sudo update-alternatives --set gcc /usr/bin/gcc-10
-          sudo update-alternatives --set g++ /usr/bin/g++-10
+          sudo apt-fast install -y gcc-10 g++-10 libboost-all-dev bison flex
       - name: Download Coverity Build Tool
         if: ${{ env.REPO_ALIVE == 'true' }}
         run: |
@@ -49,6 +47,9 @@ jobs:
         uses: actions/checkout@master
       - name: Build with cov-build
         if: ${{ env.REPO_ALIVE == 'true' }}
+        env:
+          CC:   gcc-10
+          CXX:  g++-10
         run: |
           export PATH=/tmp/cov-analysis-linux64/bin:$PATH
           cov-build --dir cov-int make -j2
