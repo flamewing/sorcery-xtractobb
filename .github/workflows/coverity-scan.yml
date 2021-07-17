@@ -34,8 +34,9 @@ jobs:
       - name: Install dependencies
         if: ${{ env.REPO_ALIVE == 'true' }}
         run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
           sudo apt-fast update
-          sudo apt-fast install -y libboost-all-dev bison flex
+          sudo apt-fast install -y g++-10 libboost-all-dev bison flex
       - name: Download Coverity Build Tool
         if: ${{ env.REPO_ALIVE == 'true' }}
         run: |
