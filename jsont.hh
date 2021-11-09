@@ -30,7 +30,7 @@ namespace jsont {
         Float,          // number value with a fraction part
         String,         // string value
         FieldName,      // field name
-        Error,          // An error occured (see `error()` for details)
+        Error,          // An error occurred (see `error()` for details)
         Comma
     };
 

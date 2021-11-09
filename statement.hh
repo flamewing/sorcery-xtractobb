@@ -48,7 +48,7 @@ public:
             -> std::ostream& {
         return write_impl(out, indent);
     }
-    [[nodiscard]] static auto getIndent(size_t indent) -> std::string {
+    [[nodiscard]] static auto getIndent(size_t indent) {
         return std::string(indent, ' ');
     }
 

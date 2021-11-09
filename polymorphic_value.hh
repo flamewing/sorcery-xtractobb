@@ -234,9 +234,8 @@ namespace nonstd {
         // Move-constructors
         //
 
-        polymorphic_value(polymorphic_value&& p) noexcept {
-            ptr_   = p.ptr_;
-            cb_    = std::move(p.cb_);
+        polymorphic_value(polymorphic_value&& p) noexcept
+                : ptr_(p.ptr_), cb_(std::move(p.cb_)) {
             p.ptr_ = nullptr;
         }
 
@@ -259,10 +258,10 @@ namespace nonstd {
                 class U,
                 class V = std::enable_if_t<
                         !std::is_same_v<T, U> && std::is_convertible_v<U*, T*>>>
-        explicit polymorphic_value(polymorphic_value<U>&& p) {
-            ptr_ = p.ptr_;
-            cb_  = std::make_unique<detail::delegating_control_block<T, U>>(
-                    std::move(p.cb_));
+        explicit polymorphic_value(polymorphic_value<U>&& p)
+                : ptr_(p.ptr_),
+                  cb_(std::make_unique<detail::delegating_control_block<T, U>>(
+                          std::move(p.cb_))) {
             p.ptr_ = nullptr;
         }
 
