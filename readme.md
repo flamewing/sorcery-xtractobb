@@ -39,3 +39,23 @@ Also provided is a "xtract_all_obbs.sh" which will extract all Sorcery! OBBs and
 - [ ] Decompile the reference file into [Ink script](https://github.com/inkle/ink);
 - [ ] Use a different JSON tokenizer.
 - [ ] Get Coverity working again once it supports GCC8/c++17
+- [ ] Figure out what the ktx files are on the Steam version
+
+## Notes on file types
+
+Most of the extracted files should be easily readable. There are two file types that need some additional care: the img and ktx files. These files are always paired up as such:
+
+- either a `<filename>.img` + `<filename>.ktx` pair;
+- or a `<filename>.img` + `<filename>.ktx` + `<filename>.alpha.ktx` triple.
+
+The img files are metadata for the corresponding ktx file(s); they are always 20 bytes long, being composed of 5 little endian 4-byte integers:
+
+- Always a 3 or 4; I believe this is the number of channels in the composed texture
+- Width of texture
+- Height of texture
+- Width of alpha texture
+- Height of alpha texture
+
+The ktx files are trickier: in the Android version (and, presumably, the iOS version), they are [Khronos Textures](https://www.khronos.org/ktx/), and typically comes in pairs: one `<filename>.ktx` and one `<filename>.alpha.ktx`. The alpha file, when present, must be merged in as an alpha channel in the "main" ktx file, and they must both be resized according to the metadata in the corresponding img file. You can obtain software for reading ktx files [here](https://github.com/KhronosGroup/KTX-Software/wiki).
+
+In the Steam version, the ktx files are in a different format, and the separate alpha files do not exist; what format these are in is unknown at this time.
