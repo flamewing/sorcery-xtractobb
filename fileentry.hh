@@ -49,9 +49,8 @@ struct Basic_File_entry {
     Basic_File_entry(
             std::string_view::const_iterator it,
             std::string_view                 oggview) noexcept
-            : fdata(getData(it, oggview)),
+            : fname(getData(it, oggview)), fdata(getData(it, oggview)),
               compressed(fdata.size() != Read4(it)) {
-        fname = getData(it, oggview);
     }
 
 private:
