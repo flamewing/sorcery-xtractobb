@@ -15,8 +15,7 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EXPRESSION_HH
-#define EXPRESSION_HH
+#pragma once
 
 #include "polymorphic_value.hh"
 #include "util.hh"
@@ -31,24 +30,24 @@ public:
     Expression(Expression const&)     = default;
     Expression(Expression&&) noexcept = default;
 
-    auto operator=(Expression const&) -> Expression& = default;
+    auto operator=(Expression const&) -> Expression&     = default;
     auto operator=(Expression&&) noexcept -> Expression& = default;
 
-    auto write(std::ostream& out, bool needParens) const noexcept
+    auto write(std::ostream& output, bool needParens) const noexcept
             -> std::ostream& {
         if (needParens && !is_simple()) {
-            out << '(';
-            return write_impl(out) << ')';
+            output << '(';
+            return write_impl(output) << ')';
         }
-        return write_impl(out);
+        return write_impl(output);
     }
     [[nodiscard]] virtual auto is_simple() const noexcept -> bool {
         return true;
     }
 
 private:
-    virtual auto write_impl(std::ostream& out) const noexcept -> std::ostream& {
-        return out;
+    virtual auto write_impl(std::ostream& output) const noexcept -> std::ostream& {
+        return output;
     }
 };
 
@@ -59,9 +58,9 @@ public:
     explicit ContentExpression(std::string text) : content(std::move(text)) {}
 
 protected:
-    auto write_impl(std::ostream& out) const noexcept
+    auto write_impl(std::ostream& output) const noexcept
             -> std::ostream& override {
-        return out << '"' << content << '"';
+        return output << '"' << content << '"';
     }
 
 private:
@@ -73,9 +72,9 @@ public:
     explicit DivertExpression(std::string trg) : target(std::move(trg)) {}
 
 private:
-    auto write_impl(std::ostream& out) const noexcept
+    auto write_impl(std::ostream& output) const noexcept
             -> std::ostream& override {
-        return out << "  -> " << target;
+        return output << "  -> " << target;
     }
     std::string target;
 };
@@ -86,9 +85,9 @@ public:
             : varName(std::move(name)) {}
 
 private:
-    auto write_impl(std::ostream& out) const noexcept
+    auto write_impl(std::ostream& output) const noexcept
             -> std::ostream& override {
-        return out << varName;
+        return output << varName;
     }
     std::string varName;
 };
@@ -99,9 +98,9 @@ public:
             : varName(std::move(name)) {}
 
 private:
-    auto write_impl(std::ostream& out) const noexcept
+    auto write_impl(std::ostream& output) const noexcept
             -> std::ostream& override {
-        return out << varName;
+        return output << varName;
     }
     std::string varName;
 };
@@ -117,28 +116,28 @@ enum class UnaryOps : uint8_t {
 
 class UnaryOpExpression : public Expression {
 public:
-    UnaryOpExpression(UnaryOps kind, nonstd::polymorphic_value<Expression> ex)
-            : oper(kind), expr(std::move(ex)) {}
+    UnaryOpExpression(UnaryOps kind, nonstd::polymorphic_value<Expression> expr_)
+            : oper(kind), expr(std::move(expr_)) {}
 
 private:
-    auto write_impl(std::ostream& out) const noexcept
+    auto write_impl(std::ostream& output) const noexcept
             -> std::ostream& override {
         switch (oper) {
         case UnaryOps::Log10:
-            out << "Log10(";
-            expr->write(out, false);
-            return out << ')';
+            output << "Log10(";
+            expr->write(output, false);
+            return output << ')';
         case UnaryOps::Not:
         case UnaryOps::FlagIsNotSet:
         case UnaryOps::HasNotRead:
-            out << "!";
+            output << "!";
             [[fallthrough]];
         case UnaryOps::FlagIsSet:
         case UnaryOps::HasRead:
-            expr->write(out, true);
-            return out;
+            expr->write(output, true);
+            return output;
         }
-        return out;
+        return output;
     }
     UnaryOps                              oper;
     nonstd::polymorphic_value<Expression> expr;
@@ -152,12 +151,12 @@ public:
             : oper(kind), variable(std::move(var)) {}
 
 private:
-    auto write_impl(std::ostream& out) const noexcept
+    auto write_impl(std::ostream& output) const noexcept
             -> std::ostream& override {
         if (oper == PostfixOps::Increment) {
-            return variable.write(out, false) << "++\n";
+            return variable.write(output, false) << "++\n";
         }
-        return variable.write(out, false) << "--\n";
+        return variable.write(output, false) << "--\n";
     }
     PostfixOps               oper;
     VariableLValueExpression variable;
@@ -182,64 +181,62 @@ enum class BinaryOps : uint8_t {
 class BinaryOpExpression : public Expression {
 public:
     BinaryOpExpression(
-            BinaryOps kind, nonstd::polymorphic_value<Expression> ll,
-            nonstd::polymorphic_value<Expression> rr)
-            : oper(kind), lhs(std::move(ll)), rhs(std::move(rr)) {}
+            BinaryOps kind, nonstd::polymorphic_value<Expression> lhs_,
+            nonstd::polymorphic_value<Expression> rhs_)
+            : oper(kind), lhs(std::move(lhs_)), rhs(std::move(rhs_)) {}
     [[nodiscard]] auto is_simple() const noexcept -> bool override {
         return false;
     }
 
 private:
-    auto write_impl(std::ostream& out) const noexcept
+    auto write_impl(std::ostream& output) const noexcept
             -> std::ostream& override {
-        lhs->write(out, true);
+        lhs->write(output, true);
         switch (oper) {
         case BinaryOps::Add:
-            out << " + ";
+            output << " + ";
             break;
         case BinaryOps::Subtract:
-            out << " - ";
+            output << " - ";
             break;
         case BinaryOps::Divide:
-            out << " / ";
+            output << " / ";
             break;
         case BinaryOps::Mod:
-            out << " % ";
+            output << " % ";
             break;
         case BinaryOps::Multiply:
-            out << " * ";
+            output << " * ";
             break;
         case BinaryOps::And:
-            out << " && ";
+            output << " && ";
             break;
         case BinaryOps::Or:
-            out << " || ";
+            output << " || ";
             break;
         case BinaryOps::Equals:
-            out << " == ";
+            output << " == ";
             break;
         case BinaryOps::NotEquals:
-            out << " != ";
+            output << " != ";
             break;
         case BinaryOps::GreaterThan:
-            out << " > ";
+            output << " > ";
             break;
         case BinaryOps::GreaterThanOrEqualTo:
-            out << " >= ";
+            output << " >= ";
             break;
         case BinaryOps::LessThan:
-            out << " < ";
+            output << " < ";
             break;
         case BinaryOps::LessThanOrEqualTo:
-            out << " <= ";
+            output << " <= ";
             break;
         }
-        rhs->write(out, true);
-        return out;
+        rhs->write(output, true);
+        return output;
     }
     BinaryOps                             oper;
     nonstd::polymorphic_value<Expression> lhs;
     nonstd::polymorphic_value<Expression> rhs;
 };
-
-#endif

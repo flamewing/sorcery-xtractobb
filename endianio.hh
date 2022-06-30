@@ -15,8 +15,7 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ENDIANIO_HH
-#define ENDIANIO_HH
+#pragma once
 
 #include <array>
 #include <cstdint>
@@ -27,13 +26,14 @@
 // Utility to convert "fancy pointer" to pointer (ported from C++20).
 template <typename T>
 __attribute__((always_inline, const)) inline constexpr auto to_address(
-        T* in) noexcept -> T* {
-    return in;
+        T* input) noexcept -> T* {
+    return input;
 }
 
 template <typename Iter>
-__attribute__((always_inline, pure)) inline constexpr auto to_address(Iter in) {
-    return to_address(in.operator->());
+__attribute__((always_inline, pure)) inline constexpr auto to_address(
+        Iter input) {
+    return to_address(input.operator->());
 }
 
 #define MPL_DEFINE_HAS_ALIAS(alias_name) \
@@ -62,9 +62,9 @@ namespace detail {
 
         // NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
         struct nonesuch final {
-            nonesuch(nonesuch const&) = delete;
-            nonesuch()                = delete;
-            ~nonesuch()               = delete;
+            nonesuch(nonesuch const&)       = delete;
+            nonesuch()                      = delete;
+            ~nonesuch()                     = delete;
             void operator=(nonesuch const&) = delete;
         };
     }    // namespace
@@ -247,13 +247,13 @@ namespace detail {
 #undef MPL_DEFINE_HAS_ALIAS
 
 template <typename T, detail::is_pointer_like_t<T> = true>
-__attribute__((always_inline)) inline auto Read4(T&& in) -> uint32_t {
-    auto ptr{to_address(in)};
+__attribute__((always_inline)) inline auto Read4(T&& input) -> uint32_t {
+    auto ptr{to_address(input)};
     alignas(alignof(uint32_t)) std::array<uint8_t, sizeof(uint32_t)> buffer{};
     std::memcpy(buffer.data(), ptr, sizeof(uint32_t));
     uint32_t val = 0;
     std::memcpy(&val, buffer.data(), sizeof(uint32_t));
-    std::advance(in, sizeof(uint32_t));
+    std::advance(input, sizeof(uint32_t));
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     return val;
 #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -265,22 +265,20 @@ __attribute__((always_inline)) inline auto Read4(T&& in) -> uint32_t {
 }
 
 template <typename T, detail::is_pointer_like_t<T> = true>
-inline void Write4(T&& out, uint32_t val) {
-    auto ptr{to_address(out)};
+inline void Write4(T&& output, uint32_t val) {
+    auto ptr{to_address(output)};
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     val = __builtin_bswap32(val);
 #elif __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
 #    error "Byte order is neither little endian nor big endian. Do not know how to proceed."
 #endif
     std::memcpy(ptr, &val, sizeof(uint32_t));
-    std::advance(out, sizeof(uint32_t));
+    std::advance(output, sizeof(uint32_t));
 }
 
-inline void Write4(std::ostream& out, uint32_t val) {
+inline void Write4(std::ostream& output, uint32_t val) {
     using oschar_t = std::ostream::char_type;
     alignas(alignof(uint32_t)) std::array<oschar_t, sizeof(uint32_t)> buffer{};
     Write4(std::begin(buffer), val);
-    out.write(std::cbegin(buffer), sizeof(uint32_t));
+    output.write(std::cbegin(buffer), sizeof(uint32_t));
 }
-
-#endif

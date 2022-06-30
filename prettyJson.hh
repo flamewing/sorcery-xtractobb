@@ -15,9 +15,6 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PRETTY_JSON_H
-#define PRETTY_JSON_H
-
 enum PrettyJSON { eNO_WHITESPACE = -1, ePRETTY = 0, eCOMPACT = 1 };
 
 #include "jsont.hh"
@@ -77,7 +74,7 @@ void printJSON(
         case jsont::ArrayStart: {
             printIndentedValue(printValueRaw, false);
             auto const next = static_cast<jsont::Token>(
-                    static_cast<uint8_t>(tok) + uint8_t(1));
+                    static_cast<uint8_t>(tok) + static_cast<uint8_t>(1));
             tok = reader.next();
             if (tok == next) {
                 printValueRaw();
@@ -156,10 +153,8 @@ private:
     PrettyJSON const pretty;
     size_t*          length;
 };
-// NOLINTNEXTLINE(modernize-use-trailing-return-type)
+// NOLINTNEXTLINE(modernize-use-trailing-return-type,readability-identifier-length)
 BOOST_IOSTREAMS_PIPABLE(basic_json_filter, 2)
 
 using json_filter  = basic_json_filter<char>;
 using wjson_filter = basic_json_filter<wchar_t>;
-
-#endif    // PRETTY_JSON_H

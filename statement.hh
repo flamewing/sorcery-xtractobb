@@ -15,8 +15,7 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef STATEMENT_HH
-#define STATEMENT_HH
+#pragma once
 
 #include "expression.hh"
 #include "polymorphic_value.hh"
@@ -41,7 +40,7 @@ public:
     Statement(Statement const&)     = default;
     Statement(Statement&&) noexcept = default;
 
-    auto operator=(Statement const&) -> Statement& = default;
+    auto operator=(Statement const&) -> Statement&     = default;
     auto operator=(Statement&&) noexcept -> Statement& = default;
 
     auto write(std::ostream& out, size_t indent) const noexcept
@@ -397,5 +396,3 @@ private:
         return write_header_base(out) << " ===\n";
     }
 };
-
-#endif

@@ -19,17 +19,17 @@ using std::strtoll;
 using namespace std::literals::string_view_literals;
 
 namespace jsont {
-    static inline auto safe_isalnum(const char c) -> bool {
-        return isalnum(static_cast<unsigned char>(c)) != 0;
+    static inline auto safe_isalnum(const char value) -> bool {
+        return isalnum(static_cast<unsigned char>(value)) != 0;
     }
-    static inline auto safe_isdigit(const char c) -> bool {
-        return isdigit(static_cast<unsigned char>(c)) != 0;
+    static inline auto safe_isdigit(const char value) -> bool {
+        return isdigit(static_cast<unsigned char>(value)) != 0;
     }
-    static inline auto is_plus_minus(const char c) -> bool {
-        return c == '+' || c == '-';
+    static inline auto is_plus_minus(const char value) -> bool {
+        return value == '+' || value == '-';
     }
-    static inline auto is_exponent_introducer(const char c) -> bool {
-        return c == 'E' || c == 'e';
+    static inline auto is_exponent_introducer(const char value) -> bool {
+        return value == 'E' || value == 'e';
     }
 
     inline auto Tokenizer::readAtom(string_view atom, Token token) noexcept
@@ -73,7 +73,7 @@ namespace jsont {
         return "Unspecified error"sv;
     }
 
-    auto Tokenizer::dataValue() const noexcept -> string_view {
+    [[gnu::pure]] auto Tokenizer::dataValue() const noexcept -> string_view {
         if (!hasValue()) {
             return translateToken(_token);
         }
@@ -114,8 +114,8 @@ namespace jsont {
 
     inline void Tokenizer::skipWS() noexcept {
         while (!endOfInput()) {
-            char b = _input[_offset++];
-            switch (b) {
+            const char value = _input[_offset++];
+            switch (value) {
             case ' ':
             case '\t':
             case '\r':
@@ -167,10 +167,10 @@ namespace jsont {
         return readDigits(0);
     }
 
-    inline auto Tokenizer::readNumber(char b, size_t token_start) noexcept
+    inline auto Tokenizer::readNumber(char value, size_t token_start) noexcept
             -> Token {
-        bool have_digit = safe_isdigit(b);
-        if (!have_digit && b != '-') {
+        bool have_digit = safe_isdigit(value);
+        if (!have_digit && value != '-') {
             return setError(InvalidByte);
         }
         setToken(jsont::Integer);
@@ -185,23 +185,24 @@ namespace jsont {
         return current();
     }
 
-    auto Tokenizer::readString(char b, size_t token_start) noexcept -> Token {
+    auto Tokenizer::readString(char value, size_t token_start) noexcept
+            -> Token {
         while (!endOfInput()) {
-            b = _input[_offset++];
+            value = _input[_offset++];
 
-            if (b == '\\') {
+            if (value == '\\') {
                 if (endOfInput()) {
                     return setError(PrematureEndOfInput);
                 }
                 _offset++;
-            } else if (b == '"') {
+            } else if (value == '"') {
                 break;
-            } else if (b == 0) {
+            } else if (value == 0) {
                 return setError(InvalidByte);
             }
         }
 
-        if (b != '"') {
+        if (value != '"') {
             return setError(UnterminatedString);
         }
         // Note: double-quotes are included in the token value.
@@ -210,8 +211,8 @@ namespace jsont {
         skipWS();
         // is this a field name?
         if (!endOfInput()) {
-            b = _input[_offset++];
-            switch (b) {
+            value = _input[_offset++];
+            switch (value) {
             case ':':
                 return setToken(FieldName);
             case ',':
@@ -240,9 +241,9 @@ namespace jsont {
         //
         skipWS();
         while (!endOfInput()) {
-            size_t token_start = _offset;
-            char   b           = _input[_offset++];
-            switch (b) {
+            size_t     token_start = _offset;
+            const char value       = _input[_offset++];
+            switch (value) {
             case '{':
                 return setToken(ObjectStart);
             case '}':
@@ -263,11 +264,11 @@ namespace jsont {
             // either reach end of input, a colon (then the value is a field
             // name), a comma, or an array or object terminator.
             case '"':
-                return readString(b, token_start);
+                return readString(value, token_start);
             case ',':
                 return readComma();
             default:
-                return readNumber(b, token_start);
+                return readNumber(value, token_start);
             }
         }
 

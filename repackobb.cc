@@ -127,10 +127,10 @@ private:
             assert(tok == jsont::FieldName);
             curr_position = stitches.tellp();
             printValueObject(sint, reader)
-                    << '"' << uint32_t(curr_position) << ' ';
+                    << '"' << static_cast<uint32_t>(curr_position) << ' ';
             tok = reader.next();
             assert(tok == jsont::ObjectStart);
-            // Handle "content" arrays seperately.
+            // Handle "content" arrays separately.
             tok = reader.next();
             if (tok == jsont::FieldName
                 && reader.dataValue() == R"("content")"sv) {
@@ -150,7 +150,7 @@ private:
                 stitches << "}\n";
             }
             auto end_position = stitches.tellp();
-            sint << uint32_t(end_position - curr_position) << '"';
+            sint << static_cast<uint32_t>(end_position - curr_position) << '"';
             tok = reader.next();
             if (tok == jsont::Comma) {
                 printValueRaw(sint, reader);
@@ -191,7 +191,7 @@ private:
     filtering_ostream& inkContent;
     string             inkFileName;
 };
-// NOLINTNEXTLINE(modernize-use-trailing-return-type)
+// NOLINTNEXTLINE(modernize-use-trailing-return-type,readability-identifier-length)
 BOOST_IOSTREAMS_PIPABLE(basic_json_unstitch_filter, 2)
 
 using json_unstitch_filter  = basic_json_unstitch_filter<char>;
@@ -276,8 +276,8 @@ void checkFile(path const& fpath) {
     vector<RFile_entry> entries;
     {
         ifstream      file_table(indir / "FileTable.ser");
-        text_iarchive ia(file_table);
-        ia >> entries;
+        text_iarchive archive(file_table);
+        archive >> entries;
     }
 
     // TODO: Main json file should be found from Info.plist file:
@@ -337,7 +337,7 @@ auto encodeFile(ofstream& obbContents, path const& infile, bool compressed)
             }
             if (compressed) {
                 fsout.push(zlib_compressor(
-                        zlib::best_compression, 1 * 1024 * 1024));
+                        zlib::best_compression, 1ULL * 1024ULL * 1024ULL));
             }
             fsout.push(sint);
             fsout << fin.rdbuf();

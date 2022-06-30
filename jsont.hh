@@ -8,8 +8,7 @@
  *	MIT-style license that can be found in the copying.md file.
  */
 
-#ifndef JSONT_CXX_INCLUDED
-#define JSONT_CXX_INCLUDED
+#pragma once
 
 #include <string>
 #include <string_view>
@@ -55,7 +54,7 @@ namespace jsont {
         auto hasValue() const noexcept -> bool;
 
         // Returns a slice of the input which represents the current value, or
-        // nothing (empty etring_view) if the current token has no value (e.g.
+        // nothing (empty string_view) if the current token has no value (e.g.
         // start of an object).
         auto dataValue() const noexcept -> std::string_view;
 
@@ -106,14 +105,14 @@ namespace jsont {
         auto readDigits(size_t digits) noexcept -> bool;
         auto readFraction() noexcept -> bool;
         auto readExponent() noexcept -> bool;
-        auto readNumber(char b, size_t token_start) noexcept -> Token;
-        auto readString(char b, size_t token_start) noexcept -> Token;
+        auto readNumber(char value, size_t token_start) noexcept -> Token;
+        auto readString(char value, size_t token_start) noexcept -> Token;
         auto readComma() noexcept -> Token;
         auto readEndBracket(Token token) noexcept -> Token;
         auto readAtom(std::string_view atom, Token token) noexcept -> Token;
         auto availableInput() const noexcept -> size_t;
         auto endOfInput() const noexcept -> bool;
-        auto setToken(Token t) noexcept -> Token;
+        auto setToken(Token token) noexcept -> Token;
         auto setError(ErrorCode error) noexcept -> Token;
         void initConverter() noexcept;
 
@@ -194,8 +193,8 @@ namespace jsont {
         return _offset == _input.length();
     }
 
-    inline auto Tokenizer::setToken(Token t) noexcept -> Token {
-        return _token = t;
+    inline auto Tokenizer::setToken(Token token) noexcept -> Token {
+        return _token = token;
     }
 
     inline auto Tokenizer::setError(Tokenizer::ErrorCode error) noexcept
@@ -219,5 +218,3 @@ namespace jsont {
         return _error;
     }
 }    // namespace jsont
-
-#endif    // JSONT_CXX_INCLUDED

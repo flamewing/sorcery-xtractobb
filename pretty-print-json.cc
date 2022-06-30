@@ -113,7 +113,7 @@ auto main(int argc, char* argv[]) -> int {
         }
 
         vector<char> buf(len);
-        fin.read(&buf[0], static_cast<std::streamsize>(len));
+        fin.read(buf.data(), static_cast<std::streamsize>(len));
         fin.close();
 
         ofstream fout(jsonfile, ios::out | ios::binary);

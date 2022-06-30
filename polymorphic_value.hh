@@ -21,8 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-#ifndef POLYMORPHIC_VALUE_H_INCLUDED
-#define POLYMORPHIC_VALUE_H_INCLUDED
+#pragma once
 
 #include <cassert>
 #include <exception>
@@ -60,7 +59,7 @@ namespace nonstd {
             control_block(control_block&&) noexcept = default;
 
             auto operator=(control_block const&) -> control_block& = default;
-            auto operator             =(control_block&&) noexcept
+            auto operator=(control_block&&) noexcept
                     -> control_block& = default;
 
             [[nodiscard]] virtual auto clone() const
@@ -389,5 +388,3 @@ namespace nonstd {
         t.swap(u);
     }
 }    // namespace nonstd
-
-#endif

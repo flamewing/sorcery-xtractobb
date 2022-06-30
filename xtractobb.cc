@@ -115,7 +115,7 @@ private:
             assert(tok == jsont::FieldName);
             if (reader.dataValue() == R"("filename")"sv) {
                 // TODO: instead of being discarded, this should be used with
-                // output directoty to open stitch source file
+                // output directory to open stitch source file
                 tok = reader.next();    // Fetch filename...
                 assert(tok == jsont::String);
                 tok = reader.next();    // ... and discard it
@@ -184,7 +184,7 @@ private:
     }
     string_view const inkContent;
 };
-// NOLINTNEXTLINE(modernize-use-trailing-return-type)
+// NOLINTNEXTLINE(modernize-use-trailing-return-type,readability-identifier-length)
 BOOST_IOSTREAMS_PIPABLE(basic_json_stitch_filter, 2)
 
 using json_stitch_filter  = basic_json_stitch_filter<char>;
@@ -348,11 +348,12 @@ auto main(int argc, char* argv[]) -> int {
         {
             // Save file table for future reference.
             ofstream      file_table(outdir / "FileTable.ser");
-            text_oarchive oa(file_table);
-            oa << entries;
+            text_oarchive archive(file_table);
+            archive << entries;
         }
 
-        zlib_decompressor unzip(zlib::default_window_bits, 1 * 1024 * 1024);
+        zlib_decompressor unzip(
+                zlib::default_window_bits, 1ULL * 1024ULL * 1024ULL);
 
         for (auto& elem : entries) {
             cout << "\33[2K\rExtracting file "sv << elem.name() << flush;

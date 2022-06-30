@@ -15,8 +15,7 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FILEENTRY_HH
-#define FILEENTRY_HH
+#pragma once
 
 #include "endianio.hh"
 
@@ -47,30 +46,28 @@ struct Basic_File_entry {
     }
     Basic_File_entry() noexcept = default;
     Basic_File_entry(
-            std::string_view::const_iterator it,
+            std::string_view::const_iterator position,
             std::string_view                 oggview) noexcept
-            : fname(getData(it, oggview)), fdata(getData(it, oggview)),
-              compressed(fdata.size() != Read4(it)) {
+            : fname(getData(position, oggview)), fdata(getData(position, oggview)),
+              compressed(fdata.size() != Read4(position)) {
     }
 
 private:
     friend class boost::serialization::access;
     static auto getData(
-            std::string_view::const_iterator& it,
+            std::string_view::const_iterator& position,
             std::string_view oggview) noexcept -> std::string_view {
-        uint32_t ptr = Read4(it);
-        uint32_t len = Read4(it);
+        uint32_t ptr = Read4(position);
+        uint32_t len = Read4(position);
         return oggview.substr(ptr, len);
     }
     template <class Archive>
-    void serialize(Archive& ar, unsigned int const) {
+    void serialize(Archive& archive, unsigned int const) {
         // Do NOT want to save or read file data (fdata) here
-        (ar & fname);
-        (ar & compressed);
+        (archive & fname);
+        (archive & compressed);
     }
 };
 
 using XFile_entry = Basic_File_entry<std::string_view>;
 using RFile_entry = Basic_File_entry<File_data>;
-
-#endif

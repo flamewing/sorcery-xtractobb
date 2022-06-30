@@ -15,19 +15,18 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef UTIL_HH
-#define UTIL_HH
+#pragma once
 
 #include <memory>
 #include <type_traits>
 
 namespace gsl {
-    template <class T, class = std::enable_if_t<std::is_pointer<T>::value>>
+    template <
+            class T,
+            std::enable_if_t<std::is_pointer<T>::value, void*> = nullptr>
     using owner = T;
 }
 
 // Ignore warnings for unused variables.
 template <typename... Args>
 void ignore_unused_variable_warning(Args&...) {}
-
-#endif

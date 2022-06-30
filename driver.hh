@@ -15,8 +15,7 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef DRIVER_HH
-#define DRIVER_HH
+#pragma once
 
 #include "polymorphic_value.hh"
 
@@ -52,7 +51,7 @@ class driver {
 public:
     explicit driver(std::ostream& out);
     // Run the parser on file F.  Return 0 on success.
-    auto parse(const std::string& f) -> int;
+    auto parse(const std::string& path) -> int;
     // Handling the scanner.
     void scan_begin();
     void scan_end();
@@ -75,5 +74,3 @@ public:
     // The token's location used by the scanner.
     yy::location location;
 };
-
-#endif

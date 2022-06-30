@@ -37,7 +37,7 @@ endif
 
 START_FLAGS:=-MMD -Wall -Wextra -pedantic -Walloc-zero -Walloca -Wcatch-value=1 -Wcast-align -Wcast-qual -Wconditionally-supported -Wctor-dtor-privacy -Wdisabled-optimization -Wduplicated-branches -Wduplicated-cond -Wextra-semi -Wformat-nonliteral -Wformat-security -Wlogical-not-parentheses -Wlogical-op -Wmissing-include-dirs -Wnon-virtual-dtor -Wnull-dereference -Wold-style-cast -Woverloaded-virtual -Wplacement-new -Wredundant-decls -Wshift-negative-value -Wshift-overflow -Wtrigraphs -Wundef -Wuninitialized -Wuseless-cast -Wwrite-strings -Wformat-signedness -Wcast-align=strict -Wshadow -Wsign-conversion -Wsuggest-attribute=cold -Wsuggest-attribute=const -Wsuggest-attribute=format -Wsuggest-attribute=malloc -Wsuggest-attribute=noreturn -Wsuggest-attribute=pure -Wsuggest-final-methods -Wsuggest-final-types
 
-CXXFLAGS := -std=c++17 ${DEBUGFLAGS}
+CXXFLAGS := -std=c++17 ${DEBUGFLAGS} -fdiagnostics-color=always
 $(shell touch tmp.cc)
 CXXFLAGS+=$(foreach flag,$(START_FLAGS),$(shell g++ -Werror $(flag) -c tmp.cc -o tmp.o &> /dev/null && echo "$(flag)"))
 $(shell rm -f tmp.cc tmp.o tmp.d)
